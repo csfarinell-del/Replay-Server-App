@@ -23,7 +23,6 @@ from main_menu_tab import MainMenuTab
 from server_config_tab import ServerConfigTab
 from virtual_steward_tab import VirtualStewardTab
 from advanced_options_tab import AdvancedOptionsTab
-from server_terminal_tab import ServerTerminalTab
 
 
 class ACServerConfigGUI(QMainWindow):
@@ -131,11 +130,7 @@ class ACServerConfigGUI(QMainWindow):
         # Tab 4: Advanced Options
         self.advanced_options_tab = AdvancedOptionsTab(self)
         tab_widget.addTab(self.advanced_options_tab, "Advanced Options")
-
-        # Tab 5: Server Terminal
-        self.server_terminal_tab = ServerTerminalTab(self)
-        tab_widget.addTab(self.server_terminal_tab, "Server Terminal")
-
+        
         return tab_widget
     
     def load_settings(self):
