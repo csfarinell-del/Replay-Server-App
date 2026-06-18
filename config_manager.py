@@ -213,6 +213,7 @@ def write_entry_list_ini(file_path: str, entry_list_data: List[Dict[str, str]]) 
 def update_data_track_params(file_path: str, track_value: str) -> None:
     """
     Update the track name in data_track_params.ini.
+    Only replaces the FIRST section header to avoid duplicate sections.
     
     Args:
         file_path: Path to data_track_params.ini
@@ -227,15 +228,16 @@ def update_data_track_params(file_path: str, track_value: str) -> None:
     with open(str(path), 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # Find and replace section header
-    # Look for [track_name] pattern and replace with [track_value]
+    # Find and replace only the FIRST section header
     lines = content.split('\n')
     new_lines = []
+    first_section_found = False
     
     for line in lines:
-        if line.strip().startswith('[') and line.strip().endswith(']'):
-            # This is a section header - replace it
+        if not first_section_found and line.strip().startswith('[') and line.strip().endswith(']'):
+            # This is the first section header - replace it
             new_lines.append(f"[{track_value}]")
+            first_section_found = True
         else:
             new_lines.append(line)
     

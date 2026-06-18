@@ -81,6 +81,7 @@ class VirtualStewardTab(QWidget):
         bot_trains_layout = QHBoxLayout()
         self.bot_trains_checkbox = QCheckBox("Enable Bot Trains")
         self.bot_trains_checkbox.setEnabled(False)
+        self.bot_trains_checkbox.stateChanged.connect(self.on_bot_trains_changed)
         bot_trains_layout.addWidget(self.bot_trains_checkbox)
         bot_trains_layout.addStretch()
         main_layout.addLayout(bot_trains_layout)
@@ -94,6 +95,7 @@ class VirtualStewardTab(QWidget):
         self.train_gap_slider.setMinimum(5)
         self.train_gap_slider.setMaximum(100)
         self.train_gap_slider.setValue(5)
+        # Initially disabled - will be controlled by VS checkbox state
         self.train_gap_slider.setEnabled(False)
         self.train_gap_slider.valueChanged.connect(self.on_gap_slider_changed)
         gap_layout.addWidget(self.train_gap_slider)
@@ -140,14 +142,34 @@ class VirtualStewardTab(QWidget):
         self.add_replay_btn.setEnabled(is_checked)
         self.loop_lap_input.setEnabled(is_checked)
         self.bot_trains_checkbox.setEnabled(is_checked)
-        self.train_gap_slider.setEnabled(is_checked and self.bot_trains_checkbox.isChecked())
-        self.train_gap_value_label.setEnabled(is_checked and self.bot_trains_checkbox.isChecked())
         self.num_bots_combo.setEnabled(is_checked)
         
         # Update bot config on state change
         self.parent_window.on_vs_enabled_changed()
         self.parent_window.on_num_bots_changed()
         self.parent_window.mark_as_modified()
+        
+        # Ensure proper initialization of dependent controls
+        self.on_bot_trains_changed()
+    
+    def on_bot_trains_changed(self):
+        """Handle bot trains enable/disable"""
+        is_checked = self.bot_trains_checkbox.isChecked()
+        
+        # Enable/disable train gap controls based on checkbox state
+        self.train_gap_slider.setEnabled(is_checked)
+        
+        # Apply grey-out styling to disabled controls
+        if not is_checked:
+            # Completely disable interaction and apply visual styling
+            self.train_gap_slider.setDisabled(True)
+            self.train_gap_value_label.setStyleSheet("color: gray;")
+            self.gap_label.setStyleSheet("color: gray;")
+        else:
+            # Re-enable slider and reset styling
+            self.train_gap_slider.setEnabled(True)
+            self.train_gap_value_label.setStyleSheet("")
+            self.gap_label.setStyleSheet("")
     
     def on_add_replay_file_clicked(self):
         """Handle replay file selection"""

@@ -912,7 +912,9 @@ class ACServerConfigGUI(QMainWindow):
                         else:
                             track_value = track_display.lower().replace(' ', '_')
                     
-                    config_manager.update_data_track_params(data_track_params_path, track_value)
+                    # Note: data_track_params.ini should NOT be modified - it contains all track configs
+                    # The AC server reads the section matching the TRACK value in server_cfg.ini
+                    # config_manager.update_data_track_params(data_track_params_path, track_value)
                 except Exception as e:
                     errors.append(f"Track Parameters (data_track_params.ini): {str(e)}")
             
