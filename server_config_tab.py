@@ -7,10 +7,10 @@ from pathlib import Path
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QCheckBox, 
     QComboBox, QPlainTextEdit, QPushButton, QTableWidget, QTableWidgetItem,
-    QMessageBox, QScrollArea
+    QMessageBox
 )
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QCursor
 
 from widgets import ClickableLineEdit, EntryListTable
 from dialogs import CarSelectionDialog, SkinSelectionDialog, TrackSelectionDialog
@@ -46,12 +46,7 @@ class ServerConfigTab(QWidget):
         info_title.setFont(info_font)
         left_layout.addWidget(info_title, 0)
         
-        # Form fields in scrollable area
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setStyleSheet("QScrollArea { border: none; }")
-        
-        scroll_widget = QWidget()
+        # Form fields - not in scrollable area
         form_layout = QVBoxLayout()
         form_layout.setSpacing(5)
         form_layout.setContentsMargins(0, 0, 0, 0)
@@ -72,18 +67,52 @@ class ServerConfigTab(QWidget):
         track_layout.addWidget(self.server_config_widgets['TRACK'])
         form_layout.addLayout(track_layout)
         
-        # Ports
-        ports_layout = QHBoxLayout()
-        ports_layout.addWidget(QLabel("UDP Port:"))
+        # Port Forwarding section
+        # Header with title and link
+        port_header_layout = QHBoxLayout()
+        port_header_layout.setContentsMargins(0, 10, 0, 5)
+        
+        port_title = QLabel("Port Forwarding")
+        port_title_font = QFont()
+        port_title_font.setPointSize(10)
+        port_title_font.setBold(True)
+        port_title.setFont(port_title_font)
+        port_header_layout.addWidget(port_title, 0)
+        
+        # Create a clickable "What's this?" link
+        whats_this_label = QLabel('<a href="https://www.noip.com/support/knowledgebase/general-port-forwarding-guide">What\'s this?</a>')
+        whats_this_font = QFont()
+        whats_this_font.setPointSize(8)
+        whats_this_label.setFont(whats_this_font)
+        whats_this_label.setCursor(QCursor(Qt.PointingHandCursor))
+        whats_this_label.setOpenExternalLinks(True)
+        port_header_layout.addWidget(whats_this_label, 0)
+        port_header_layout.addStretch()
+        form_layout.addLayout(port_header_layout)
+        
+        # UDP Port
+        udp_layout = QHBoxLayout()
+        udp_layout.addWidget(QLabel("UDP Port:"))
         self.server_config_widgets['UDP_PORT'] = QLineEdit()
-        ports_layout.addWidget(self.server_config_widgets['UDP_PORT'])
-        ports_layout.addWidget(QLabel("TCP Port:"))
+        udp_layout.addWidget(self.server_config_widgets['UDP_PORT'])
+        udp_layout.addStretch()
+        form_layout.addLayout(udp_layout)
+        
+        # TCP Port
+        tcp_layout = QHBoxLayout()
+        tcp_layout.addWidget(QLabel("TCP Port:"))
         self.server_config_widgets['TCP_PORT'] = QLineEdit()
-        ports_layout.addWidget(self.server_config_widgets['TCP_PORT'])
-        ports_layout.addWidget(QLabel("HTTP Port:"))
+        tcp_layout.addWidget(self.server_config_widgets['TCP_PORT'])
+        tcp_layout.addStretch()
+        form_layout.addLayout(tcp_layout)
+        
+        # HTTP Port
+        http_layout = QHBoxLayout()
+        http_layout.addWidget(QLabel("HTTP Port:"))
         self.server_config_widgets['HTTP_PORT'] = QLineEdit()
-        ports_layout.addWidget(self.server_config_widgets['HTTP_PORT'])
-        form_layout.addLayout(ports_layout)
+        http_layout.addWidget(self.server_config_widgets['HTTP_PORT'])
+        http_layout.addStretch()
+        form_layout.addLayout(http_layout)
         
         # Time of day
         time_layout = QHBoxLayout()
@@ -96,10 +125,7 @@ class ServerConfigTab(QWidget):
         time_layout.addStretch()
         form_layout.addLayout(time_layout)
         
-        form_layout.addStretch()
-        scroll_widget.setLayout(form_layout)
-        scroll_area.setWidget(scroll_widget)
-        left_layout.addWidget(scroll_area, 0)
+        left_layout.addLayout(form_layout, 0)
         
         # Server Description
         left_layout.addWidget(QLabel("Server Description:"), 0)

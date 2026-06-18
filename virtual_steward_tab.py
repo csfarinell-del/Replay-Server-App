@@ -28,7 +28,7 @@ class VirtualStewardTab(QWidget):
         self.train_gap_slider = None
         self.train_gap_value_label = None
         self.num_bots_combo = None
-        self.replay_file_warning = None
+        self.replay_file_status = None
         
         self.init_ui()
     
@@ -52,19 +52,15 @@ class VirtualStewardTab(QWidget):
         
         # Replay file section
         replay_layout = QHBoxLayout()
-        replay_layout.addWidget(QLabel("Replay File:"))
+        self.replay_file_status = QLabel("Replay File Missing")
+        self.replay_file_status.setStyleSheet("color: red;")
+        replay_layout.addWidget(self.replay_file_status)
         self.add_replay_btn = QPushButton("Select Replay File...")
         self.add_replay_btn.clicked.connect(self.on_add_replay_file_clicked)
         self.add_replay_btn.setEnabled(False)
         replay_layout.addWidget(self.add_replay_btn)
         replay_layout.addStretch()
         main_layout.addLayout(replay_layout)
-        
-        # Replay warning label
-        self.replay_file_warning = QLabel("⚠ No replay file found!")
-        self.replay_file_warning.setStyleSheet("color: orange;")
-        self.replay_file_warning.setVisible(False)
-        main_layout.addWidget(self.replay_file_warning)
         
         # Loop lap section
         lap_layout = QHBoxLayout()
@@ -124,15 +120,44 @@ class VirtualStewardTab(QWidget):
         # Add spacer
         main_layout.addStretch()
         
-        # Links section
-        links_layout = QHBoxLayout()
-        patreon_link = QLabel('<a href="https://www.patreon.com/admins">Support on Patreon</a>')
+        # Support section - centered
+        support_layout = QVBoxLayout()
+        support_layout.setAlignment(Qt.AlignCenter)
+        
+        support_text = QLabel("Support the creator of Virtual Steward on Patreon")
+        support_layout.addWidget(support_text, alignment=Qt.AlignCenter)
+        
+        patreon_link = QLabel('<a href="https://www.patreon.com/cw/VirtualSteward">https://www.patreon.com/cw/VirtualSteward</a>')
         patreon_link.setOpenExternalLinks(True)
-        links_layout.addWidget(patreon_link)
-        links_layout.addStretch()
-        main_layout.addLayout(links_layout)
+        support_layout.addWidget(patreon_link, alignment=Qt.AlignCenter)
+        
+        main_layout.addLayout(support_layout)
         
         self.setLayout(main_layout)
+
+        main_layout.addStretch()
+        
+        # Initialize train gap slider state (should be greyed out if bot trains is not checked)
+        self.on_bot_trains_changed()
+    
+    def update_replay_file_status(self):
+        """Update replay file status label based on file existence"""
+        if not self.parent_window.server_root:
+            self.replay_file_status.setText("Replay File Missing")
+            self.replay_file_status.setStyleSheet("color: red;")
+            return
+        
+        replay_path = Path(self.parent_window.server_root) / "replay.acreplay"
+        if replay_path.exists():
+            self.replay_file_status.setText("Replay File Present")
+            self.replay_file_status.setStyleSheet("color: green;")
+        else:
+            self.replay_file_status.setText("Replay File Missing")
+            self.replay_file_status.setStyleSheet("color: red;")
+    
+    def on_server_selected(self):
+        """Called when a different server is selected"""
+        self.update_replay_file_status()
     
     def on_vs_enabled_changed(self):
         """Handle Virtual Steward enable/disable"""
@@ -143,6 +168,9 @@ class VirtualStewardTab(QWidget):
         self.loop_lap_input.setEnabled(is_checked)
         self.bot_trains_checkbox.setEnabled(is_checked)
         self.num_bots_combo.setEnabled(is_checked)
+        
+        # Update replay file status
+        self.update_replay_file_status()
         
         # Update bot config on state change
         self.parent_window.on_vs_enabled_changed()
@@ -200,6 +228,7 @@ class VirtualStewardTab(QWidget):
                     f"Replay file copied to server:\n{dest_path}"
                 )
                 
+                self.update_replay_file_status()
                 self.parent_window.on_vs_enabled_changed()
                 self.parent_window.mark_as_modified()
             except Exception as e:

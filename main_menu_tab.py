@@ -1,14 +1,21 @@
 """
 Main Menu Tab for the Assetto Corsa Server Configuration Manager
 Handles folder selection and server management
+Includes integrated terminal functionality for each server
 """
 
+import os
+import sys
+import subprocess
 from pathlib import Path
+from typing import Dict
+
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, 
-    QListWidget, QListWidgetItem, QFileDialog, QMessageBox, QInputDialog
+    QListWidget, QListWidgetItem, QFileDialog, QMessageBox, QInputDialog,
+    QTextEdit, QSplitter, QFrame, QSizePolicy
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QProcess, pyqtSignal
 from PyQt5.QtGui import QFont
 
 from widgets import PathLineEdit
@@ -16,15 +23,44 @@ import file_manager
 
 
 class MainMenuTab(QWidget):
-    """Main Menu tab for server and folder management"""
+    """Main Menu tab for server and folder management with integrated terminal"""
+    
+    # Signal to communicate with main window about server status
+    server_started = pyqtSignal()
+    server_stopped = pyqtSignal()
     
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent_window = parent
+        
+        # Terminal history storage - one terminal per server
+        self.server_terminals: Dict[str, QTextEdit] = {}  # path -> terminal widget
+        self.current_server_path = None
+        self.running_processes: Dict[str, QProcess] = {}  # path -> QProcess for running servers
+        
+        # Auto-scroll tracking
+        self.terminal_auto_scroll_enabled = True
+        
         self.init_ui()
     
+    def closeEvent(self, event):
+        """Called when the tab/widget is closed - kill all running servers"""
+        self.kill_all_servers()
+        super().closeEvent(event)
+    
+    def kill_all_servers(self):
+        """Kill all running server processes"""
+        for server_path, process in list(self.running_processes.items()):
+            if process and process.state() == QProcess.Running:
+                process.terminate()
+                # Give it a moment to terminate gracefully
+                if not process.waitForFinished(2000):
+                    process.kill()
+                    process.waitForFinished()
+        self.running_processes.clear()
+    
     def init_ui(self):
-        """Initialize the UI"""
+        """Initialize the UI with split layout: servers list and terminal"""
         main_layout = QVBoxLayout()
         
         # Main Menu title
@@ -63,17 +99,23 @@ class MainMenuTab(QWidget):
         server_root_layout.addWidget(server_root_browse, 0)
         main_layout.addLayout(server_root_layout)
         
-        # Servers list section
-        list_label = QLabel("Available Servers:")
-        list_font = QFont()
-        list_font.setPointSize(12)
-        list_font.setBold(True)
-        list_label.setFont(list_font)
-        main_layout.addWidget(list_label)
+        # Create horizontal layout for servers list and terminal
+        content_layout = QHBoxLayout()
+        
+        # LEFT SIDE: Servers list with label
+        left_layout = QVBoxLayout()
+        
+        servers_label = QLabel("Servers:")
+        servers_font = QFont()
+        servers_font.setPointSize(12)
+        servers_font.setBold(True)
+        servers_label.setFont(servers_font)
+        left_layout.addWidget(servers_label)
         
         self.servers_list = QListWidget()
         self.servers_list.itemClicked.connect(self.on_server_list_item_clicked)
-        main_layout.addWidget(self.servers_list, 1)
+        self.servers_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        left_layout.addWidget(self.servers_list, 1)
         
         # Server management buttons
         buttons_layout = QHBoxLayout()
@@ -94,7 +136,96 @@ class MainMenuTab(QWidget):
         delete_btn.clicked.connect(self.delete_server_folder)
         buttons_layout.addWidget(delete_btn)
         
-        main_layout.addLayout(buttons_layout)
+        left_layout.addLayout(buttons_layout)
+        
+        left_frame = QFrame()
+        left_frame.setLayout(left_layout)
+        left_frame.setMinimumWidth(200)
+        content_layout.addWidget(left_frame, 0)
+        
+        # RIGHT SIDE: Terminal with label
+        right_layout = QVBoxLayout()
+        
+        terminal_label = QLabel("Terminal:")
+        terminal_font = QFont()
+        terminal_font.setPointSize(12)
+        terminal_font.setBold(True)
+        terminal_label.setFont(terminal_font)
+        right_layout.addWidget(terminal_label)
+        
+        # Terminal output area
+        self.terminal_output = QTextEdit()
+        self.terminal_output.setReadOnly(True)
+        self.terminal_output.setFont(QFont("Courier", 9))
+        self.terminal_output.setLineWrapMode(QTextEdit.NoWrap)
+        self.terminal_output.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        
+        # Connect scrollbar to track user scrolling
+        self.terminal_output.verticalScrollBar().valueChanged.connect(self.on_terminal_scroll)
+        
+        right_layout.addWidget(self.terminal_output, 1)
+        
+        # Start/Stop buttons
+        control_layout = QHBoxLayout()
+        
+        self.start_server_button = QPushButton("Start Server")
+        self.start_server_button.clicked.connect(self.start_server)
+        self.start_server_button.setEnabled(False)
+        self.start_server_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2ecc71;
+                color: white;
+                font-weight: bold;
+                padding: 5px;
+                border-radius: 3px;
+                border: 1px solid #27ae60;
+            }
+            QPushButton:hover:!disabled {
+                background-color: #27ae60;
+            }
+            QPushButton:pressed:!disabled {
+                background-color: #229954;
+            }
+            QPushButton:disabled {
+                background-color: #95a5a6;
+                color: #7f8c8d;
+            }
+        """)
+        control_layout.addWidget(self.start_server_button)
+        
+        self.stop_server_button = QPushButton("Stop Server")
+        self.stop_server_button.clicked.connect(self.stop_server)
+        self.stop_server_button.setEnabled(False)
+        self.stop_server_button.setStyleSheet("""
+            QPushButton {
+                background-color: #e74c3c;
+                color: white;
+                font-weight: bold;
+                padding: 5px;
+                border-radius: 3px;
+                border: 1px solid #c0392b;
+            }
+            QPushButton:hover:!disabled {
+                background-color: #c0392b;
+            }
+            QPushButton:pressed:!disabled {
+                background-color: #a93226;
+            }
+            QPushButton:disabled {
+                background-color: #95a5a6;
+                color: #7f8c8d;
+            }
+        """)
+        control_layout.addWidget(self.stop_server_button)
+        
+        right_layout.addLayout(control_layout)
+        
+        right_frame = QFrame()
+        right_frame.setLayout(right_layout)
+        right_frame.setMinimumWidth(400)
+        content_layout.addWidget(right_frame, 1)
+        
+        main_layout.addLayout(content_layout, 1)
         
         self.setLayout(main_layout)
     
@@ -177,9 +308,258 @@ class MainMenuTab(QWidget):
                     return
         
         server_path = item.data(Qt.UserRole)
+        self.current_server_path = server_path
         self.parent_window.server_root = server_path
         self.parent_window.settings.setValue('server_root', server_path)
+        
+        # Switch to this server's terminal history
+        self.update_terminal_display()
+        
+        # Update button states based on whether THIS server is running
+        is_this_server_running = server_path in self.running_processes
+        self.start_server_button.setEnabled(not is_this_server_running)
+        self.stop_server_button.setEnabled(is_this_server_running)
+        
         self.parent_window.auto_load_configs()
+        
+        # Update virtual steward replay file status
+        if self.parent_window.virtual_steward_tab:
+            self.parent_window.virtual_steward_tab.on_server_selected()
+    
+    def update_terminal_display(self):
+        """Update the terminal output to show the current server's history"""
+        if not self.current_server_path:
+            self.terminal_output.clear()
+            self.terminal_auto_scroll_enabled = True
+            return
+        
+        # Get or create terminal history for this server
+        if self.current_server_path not in self.server_terminals:
+            self.server_terminals[self.current_server_path] = QTextEdit()
+            self.server_terminals[self.current_server_path].setReadOnly(True)
+            self.server_terminals[self.current_server_path].setFont(QFont("Courier", 9))
+            self.server_terminals[self.current_server_path].setLineWrapMode(QTextEdit.NoWrap)
+        
+        # Copy the content from the server's terminal to the display
+        terminal_history = self.server_terminals[self.current_server_path]
+        self.terminal_output.setPlainText(terminal_history.toPlainText())
+        
+        # Re-enable auto-scroll when switching servers and scroll to bottom
+        self.terminal_auto_scroll_enabled = True
+        scrollbar = self.terminal_output.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
+    
+    def append_terminal_output(self, text: str):
+        """Append text to the current server's terminal output"""
+        if not self.current_server_path:
+            return
+        
+        # Get or create terminal history for this server
+        if self.current_server_path not in self.server_terminals:
+            self.server_terminals[self.current_server_path] = QTextEdit()
+            self.server_terminals[self.current_server_path].setReadOnly(True)
+            self.server_terminals[self.current_server_path].setFont(QFont("Courier", 9))
+            self.server_terminals[self.current_server_path].setLineWrapMode(QTextEdit.NoWrap)
+        
+        # Append to both the history and the display
+        self.server_terminals[self.current_server_path].append(text)
+        self.terminal_output.append(text)
+        
+        # Auto-scroll to bottom if enabled
+        if self.terminal_auto_scroll_enabled:
+            scrollbar = self.terminal_output.verticalScrollBar()
+            scrollbar.setValue(scrollbar.maximum())
+    
+    def on_terminal_scroll(self):
+        """Detect when user manually scrolls the terminal"""
+        scrollbar = self.terminal_output.verticalScrollBar()
+        
+        # If user scrolled away from bottom, disable auto-scroll
+        if scrollbar.value() < scrollbar.maximum():
+            self.terminal_auto_scroll_enabled = False
+        # If user scrolled back to bottom, re-enable auto-scroll
+        elif scrollbar.value() == scrollbar.maximum():
+            self.terminal_auto_scroll_enabled = True
+    
+    def start_server(self):
+        """Start the currently selected server"""
+        if not self.current_server_path:
+            self.append_terminal_output("Error: No server selected")
+            return
+        
+        if self.current_server_path in self.running_processes:
+            self.append_terminal_output("Error: This server is already running")
+            return
+        
+        try:
+            # Determine the server executable path based on platform
+            if sys.platform.startswith('win'):
+                server_executable = os.path.join(self.current_server_path, "AssettoServer.exe")
+            else:
+                server_executable = os.path.join(self.current_server_path, "AssettoServer")
+            
+            # Check if server executable exists
+            if not os.path.exists(server_executable):
+                self.append_terminal_output(f"Error: Server executable not found at {server_executable}")
+                return
+            
+            # Create a new QProcess for this server
+            process = QProcess(self)
+            process.setProgram(server_executable)
+            process.setWorkingDirectory(self.current_server_path)
+            
+            # Store reference to current server path for handlers
+            server_path = self.current_server_path
+            
+            # Connect process signals to slots with server path
+            process.readyReadStandardOutput.connect(
+                lambda: self.handle_server_output(server_path)
+            )
+            process.readyReadStandardError.connect(
+                lambda: self.handle_server_error(server_path)
+            )
+            process.finished.connect(
+                lambda exit_code, exit_status: self.on_server_finished(server_path, exit_code, exit_status)
+            )
+            process.errorOccurred.connect(
+                lambda error: self.on_server_error(server_path, error)
+            )
+            
+            # Start the server process
+            process.start()
+            
+            if process.waitForStarted():
+                # Store the process
+                self.running_processes[server_path] = process
+                
+                self.append_terminal_output(f"\n{'='*60}")
+                self.append_terminal_output(f"Starting server from: {server_executable}")
+                self.append_terminal_output(f"Working directory: {server_path}")
+                self.append_terminal_output(f"Timestamp: {Path(server_path).name}")
+                self.append_terminal_output(f"{'='*60}\n")
+                
+                # Update button states
+                self.start_server_button.setEnabled(False)
+                self.stop_server_button.setEnabled(True)
+                
+                # Emit signal that server started
+                self.server_started.emit()
+            else:
+                self.append_terminal_output("Failed to start server process")
+                
+        except Exception as e:
+            self.append_terminal_output(f"Error starting server: {str(e)}")
+    
+    def stop_server(self):
+        """Stop the currently selected server"""
+        if not self.current_server_path:
+            self.append_terminal_output("Error: No server selected")
+            return
+        
+        if self.current_server_path not in self.running_processes:
+            self.append_terminal_output("Error: This server is not running")
+            return
+        
+        process = self.running_processes[self.current_server_path]
+        
+        if process and process.state() == QProcess.Running:
+            self.append_terminal_output("\n" + "="*60)
+            self.append_terminal_output("Stopping server...")
+            self.append_terminal_output("="*60 + "\n")
+            
+            process.terminate()
+            
+            # Give it a moment to terminate gracefully
+            if not process.waitForFinished(3000):
+                process.kill()
+                process.waitForFinished()
+                
+            self.start_server_button.setEnabled(True)
+            self.stop_server_button.setEnabled(False)
+            self.append_terminal_output("Server stopped successfully!\n")
+            self.server_stopped.emit()
+        else:
+            self.append_terminal_output("Server process is not running")
+    
+    def handle_server_output(self, server_path: str):
+        """Handle output from the server process"""
+        if server_path in self.running_processes:
+            process = self.running_processes[server_path]
+            output = process.readAllStandardOutput().data().decode('utf-8', errors='replace')
+            if output.strip():
+                # Only append if we're viewing this server's terminal
+                if server_path == self.current_server_path:
+                    self.append_terminal_output(output.strip())
+                else:
+                    # Still add to history, just don't display
+                    if server_path not in self.server_terminals:
+                        self.server_terminals[server_path] = QTextEdit()
+                        self.server_terminals[server_path].setReadOnly(True)
+                        self.server_terminals[server_path].setFont(QFont("Courier", 9))
+                        self.server_terminals[server_path].setLineWrapMode(QTextEdit.NoWrap)
+                    self.server_terminals[server_path].append(output.strip())
+    
+    def handle_server_error(self, server_path: str):
+        """Handle error output from the server process"""
+        if server_path in self.running_processes:
+            process = self.running_processes[server_path]
+            error = process.readAllStandardError().data().decode('utf-8', errors='replace')
+            if error.strip():
+                # Only append if we're viewing this server's terminal
+                if server_path == self.current_server_path:
+                    self.append_terminal_output(f"ERROR: {error.strip()}")
+                else:
+                    # Still add to history
+                    if server_path not in self.server_terminals:
+                        self.server_terminals[server_path] = QTextEdit()
+                        self.server_terminals[server_path].setReadOnly(True)
+                        self.server_terminals[server_path].setFont(QFont("Courier", 9))
+                        self.server_terminals[server_path].setLineWrapMode(QTextEdit.NoWrap)
+                    self.server_terminals[server_path].append(f"ERROR: {error.strip()}")
+    
+    def on_server_finished(self, server_path: str, exit_code, exit_status):
+        """Called when the server process finishes"""
+        # Remove from running processes
+        if server_path in self.running_processes:
+            del self.running_processes[server_path]
+        
+        # Only update buttons if this is the currently viewed server
+        if server_path == self.current_server_path:
+            self.start_server_button.setEnabled(True)
+            self.stop_server_button.setEnabled(False)
+            self.append_terminal_output(f"\nServer process finished with exit code: {exit_code} (Status: {exit_status})")
+        else:
+            # Add to history if not currently viewed
+            if server_path not in self.server_terminals:
+                self.server_terminals[server_path] = QTextEdit()
+                self.server_terminals[server_path].setReadOnly(True)
+                self.server_terminals[server_path].setFont(QFont("Courier", 9))
+                self.server_terminals[server_path].setLineWrapMode(QTextEdit.NoWrap)
+            self.server_terminals[server_path].append(f"\nServer process finished with exit code: {exit_code} (Status: {exit_status})")
+        
+        self.server_stopped.emit()
+    
+    def on_server_error(self, server_path: str, error):
+        """Called when an error occurs with the server process"""
+        # Remove from running processes
+        if server_path in self.running_processes:
+            del self.running_processes[server_path]
+        
+        # Only update buttons if this is the currently viewed server
+        if server_path == self.current_server_path:
+            self.start_server_button.setEnabled(True)
+            self.stop_server_button.setEnabled(False)
+            self.append_terminal_output(f"Server process error: {error}")
+        else:
+            # Add to history if not currently viewed
+            if server_path not in self.server_terminals:
+                self.server_terminals[server_path] = QTextEdit()
+                self.server_terminals[server_path].setReadOnly(True)
+                self.server_terminals[server_path].setFont(QFont("Courier", 9))
+                self.server_terminals[server_path].setLineWrapMode(QTextEdit.NoWrap)
+            self.server_terminals[server_path].append(f"Server process error: {error}")
+        
+        self.server_stopped.emit()
     
     def _select_server_in_list(self, server_path: str):
         """Select a server in the list by path"""

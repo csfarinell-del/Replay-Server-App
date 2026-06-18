@@ -23,7 +23,6 @@ from main_menu_tab import MainMenuTab
 from server_config_tab import ServerConfigTab
 from virtual_steward_tab import VirtualStewardTab
 from advanced_options_tab import AdvancedOptionsTab
-from server_terminal_tab import ServerTerminalTab
 
 
 class ACServerConfigGUI(QMainWindow):
@@ -79,44 +78,13 @@ class ACServerConfigGUI(QMainWindow):
         left_panel = self.create_left_tabbed_panel()
         main_layout.addWidget(left_panel, 1)
         
-        # Launch Server button
-        launch_btn_layout = QHBoxLayout()
-        launch_btn_layout.addStretch()
-        
-        launch_btn = QPushButton("Launch Server")
-        launch_btn.clicked.connect(self.launch_server)
-        launch_btn.setMinimumHeight(45)
-        launch_btn.setMinimumWidth(150)
-        launch_btn.setStyleSheet("""
-            QPushButton {
-                background-color: green;
-                color: white;
-                font-weight: bold;
-                font-size: 12px;
-                padding: 7px;
-                border: 3px solid black;
-                border-radius: 5px;
-            }
-            QPushButton:hover {
-                background-color: darkgreen;
-            }
-            QPushButton:pressed {
-                background-color: forestgreen;
-            }
-        """)
-        
-        launch_btn_layout.addWidget(launch_btn)
-        launch_btn_layout.addStretch()
-        
-        main_layout.addLayout(launch_btn_layout, 0)
-        
         main_widget.setLayout(main_layout)
     
     def create_left_tabbed_panel(self) -> QTabWidget:
         """Create the left tabbed panel"""
         tab_widget = QTabWidget()
         
-        # Tab 1: Main Menu
+        # Tab 1: Main Menu (with integrated Server Terminal)
         self.main_menu_tab = MainMenuTab(self)
         tab_widget.addTab(self.main_menu_tab, "Main Menu")
         
@@ -131,10 +99,6 @@ class ACServerConfigGUI(QMainWindow):
         # Tab 4: Advanced Options
         self.advanced_options_tab = AdvancedOptionsTab(self)
         tab_widget.addTab(self.advanced_options_tab, "Advanced Options")
-
-        # Tab 5: Server Terminal
-        self.server_terminal_tab = ServerTerminalTab(self)
-        tab_widget.addTab(self.server_terminal_tab, "Server Terminal")
 
         return tab_widget
     
@@ -1027,6 +991,10 @@ class ACServerConfigGUI(QMainWindow):
     
     def closeEvent(self, event):
         """Handle application close event"""
+        # Kill all running servers
+        if self.main_menu_tab:
+            self.main_menu_tab.kill_all_servers()
+        
         if self.has_unsaved_changes:
             result = QMessageBox.question(
                 self,
