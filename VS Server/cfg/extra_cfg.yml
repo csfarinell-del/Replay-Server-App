@@ -1,0 +1,81 @@
+MinimumCSPVersion: null
+UseSteamAuth: false
+ValidateDlcOwnership: []
+MandatoryClientSecurityLevel: 0
+ForceLights: false
+EnableUnlimitedP2P: true
+NetworkBubbleDistance: 500
+OutsideNetworkBubbleRefreshRateHz: 4
+EnableServerDetails: true
+ServerDescription: Sample server for AC Server Config Manager.
+EnableRealTime: false
+EnableWeatherFx: true
+LockServerDate: true
+RainTrackGripReductionPercent: 0
+EnableAi: false
+EnablePlugins:
+- VSReplayPlugin
+IgnoreConfigurationErrors:
+  MissingCarChecksums: true
+  MissingTrackParams: true
+  UnsafeAdminWhitelist: false
+EnableClientMessages: true
+EnableUdpClientMessages: false
+EnableCustomUpdate: true
+PlayerLoadingTimeoutMinutes: 10
+PlayerChecksumTimeoutSeconds: 40
+RconPort: 0
+ForceServerTrackParams: false
+EnableAlternativeCarChecksums: false
+EnableLegacyPluginInterface: false
+LoadingImageUrls:
+- https://c10.patreonusercontent.com/4/patreon-media/p/campaign/12736240/b5779e9ab1314e64b83594fe8e98220a/eyJ3Ijo2MjB9/2.png?token-hash=hJg-hKbV35nOIgN5NloiG9pDhlqoJXzKz3two5l5NFE%3D
+UserGroups:
+  default_blacklist: blacklist.txt
+  default_whitelist: whitelist.txt
+  default_admins: admins.txt
+BlacklistUserGroup: default_blacklist
+WhitelistUserGroup: default_whitelist
+AdminUserGroup: default_admins
+UserGroupCommandPermissions: null
+AiParams:
+  AutoAssignTrafficCars: true
+  PlayerRadiusMeters: 200
+  PlayerPositionOffsetMeters: 100
+  PlayerAfkTimeoutSeconds: 10
+  MaxPlayerDistanceToAiSplineMeters: 7
+  MinSpawnDistancePoints: 100
+  MaxSpawnDistancePoints: 400
+  MinAiSafetyDistanceMeters: 20
+  MaxAiSafetyDistanceMeters: 70
+  StateSpawnDistanceMeters: 1000
+  MinStateDistanceMeters: 200
+  SpawnSafetyDistanceToPlayerMeters: 150
+  MinSpawnProtectionTimeSeconds: 4
+  MaxSpawnProtectionTimeSeconds: 8
+  MinCollisionStopTimeSeconds: 1
+  MaxCollisionStopTimeSeconds: 3
+  MaxSpeedKph: 80
+  RightLaneOffsetKph: 10
+  MaxSpeedVariationPercent: 0.15
+  MaxPlayerCount: 0
+  HideAiCars: true
+  LaneWidthMeters: 3
+  TwoWayTraffic: false
+  WrongWayTraffic: true
+  NamePrefix: Traffic
+  IgnoreObstaclesAfterSeconds: 10
+  HourlyTrafficDensity: null
+  SmoothCamber: true
+  AiBehaviorUpdateIntervalHz: 2
+  IgnorePlayerObstacleSpheres: null
+  LaneCountSpecificOverrides: {}
+  CarSpecificOverrides: []
+  DefaultDeceleration: 8.5
+  DefaultAcceleration: 2.5
+  SplineHeightOffsetMeters: 0
+  CorneringSpeedFactor: 0.65
+  CorneringBrakeDistanceFactor: 3
+  CorneringBrakeForceFactor: 0.5
+  TrafficDensity: 1
+  TyreDiameterMeters: 0.65

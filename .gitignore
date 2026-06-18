@@ -1,0 +1,30 @@
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio files
+*.user
+*.suo
+*.vs/
+*.vshost*
+*.pdb
+*.dll
+
+# Large binary files (will be handled with Git LFS)
+VS Server/AssettoServer.exe
+build/
+dist/
+*.pkg
+*.exe
+
+# IDE
+.idea/
+.vscode/
+EOF

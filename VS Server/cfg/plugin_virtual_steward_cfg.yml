@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=schemas\plugin_virtual_steward_cfg.schema.json
+
+# Enables kick hide in practice sessions
+KickHideOnPractice: true
+# Enables kick hide in qualify sessions
+KickHideOnQualify: false
+# Enables kick hide in race sessions
+KickHideOnRace: false
+# If enabled a player will become invisible for the players he hides
+MutualKickHide: false
+# Set the maximum qualify lap time to make the car visible in race in ms, zero to disable
+RaceMaxLaptime: 60000
+# Set the maximum qualify lap time as a percentage of the pole, zero to disable
+RacePolePercentage: 110
