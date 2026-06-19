@@ -1,5 +1,20 @@
 """
 Custom dialog windows for the Assetto Corsa Server Configuration Manager
+
+This module provides reusable selection dialogs for cars, tracks, and skins.
+Each dialog features a search box for quick filtering through large lists.
+
+Search Persistence:
+- Each dialog class uses a class-level variable (_last_search_text) to persist search terms
+- When a dialog is closed and reopened, the previous search term appears automatically
+- This provides continuity when users repeatedly search for the same items
+- Search state is shared across all instances of a dialog class during the session
+
+Dialog Patterns:
+- All dialogs inherit from QDialog and follow a consistent layout
+- Table displays all available items (sorted alphabetically)
+- Search input filters the table in real-time
+- OK/Cancel buttons for user confirmation
 """
 
 from pathlib import Path
@@ -14,7 +29,8 @@ from PyQt5.QtCore import Qt
 class CarSelectionDialog(QDialog):
     """Dialog for selecting a car with search functionality"""
     
-    _last_search_text = ""  # Class variable to persist search across instances
+    # Class variable to persist search across instances (intentional sharing)
+    _last_search_text = ""
     
     def __init__(self, available_cars, parent=None):
         super().__init__(parent)

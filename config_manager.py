@@ -1,6 +1,38 @@
 """
 Configuration file management for the Assetto Corsa Server Configuration Manager
-Handles loading and saving INI and YAML configuration files with targeted updates
+
+This module provides high-level I/O operations for server configuration files.
+It abstracts the details of INI and YAML parsing, allowing callers to work with
+Python dicts while maintaining the underlying file structure.
+
+Configuration Files (located in server_root/cfg/):
+1. server_cfg.ini
+   - [SERVER]: NAME, TRACK, UDP_PORT, TCP_PORT, HTTP_PORT, TIME_OF_DAY_MULT, SUN_ANGLE, MAX_CLIENTS, ALLOWED_TYRES_OUT, CLIENT_SEND_INTERVAL_HZ
+   - [WEATHER_0]: GRAPHICS (weather name)
+   - Additional sections for advanced server settings
+
+2. entry_list.ini
+   - [CARS]: List of player and bot car entries
+   - Each entry has: MODEL (car name), SKIN, DRIVERNAME, TEAM, SPECTATOR_MODE, GUID, BALLAST, RESTRICTOR
+
+3. extra_cfg.yml
+   - ServerDescription: Human-readable server info
+   - EnablePlugins: List of enabled plugin names (e.g., 'VSReplayPlugin')
+
+4. plugin_vs_replay_cfg.yml
+   - AutoStartOffset: Indicates bot train mode if != 0
+   - AutoStartStagger: Gap between bots in train
+   - LoopLap: Number of laps to repeat for replay
+
+Key Mappings for Virtual Steward:
+- Bot entries have GUID = "8888880 + index" (non-bot entries have empty GUID)
+- Bot skins have '/VS' suffix appended to differentiate from player skins
+- EnablePlugins must contain 'VSReplayPlugin' for Virtual Steward to function
+
+Important Note on data_track_params.ini:
+- This file contains reference track configurations and should NOT be modified
+- It's auto-generated based on the AC content root
+- The track selection in server_cfg.ini is independent of this file
 """
 
 import configparser
@@ -210,47 +242,5 @@ def write_entry_list_ini(file_path: str, entry_list_data: List[Dict[str, str]]) 
             f.write(line)
 
 
-def update_data_track_params(file_path: str, track_value: str) -> None:
-    """
-    Update the track name in data_track_params.ini.
-    Only replaces the FIRST section header to avoid duplicate sections.
-    
-    Args:
-        file_path: Path to data_track_params.ini
-        track_value: Track name (e.g., 'monza', 'silverstone')
-    """
-    path = Path(file_path)
-    
-    if not path.exists():
-        return
-    
-    # Read file
-    with open(str(path), 'r', encoding='utf-8') as f:
-        content = f.read()
-    
-    # Find and replace only the FIRST section header
-    lines = content.split('\n')
-    new_lines = []
-    first_section_found = False
-    
-    for line in lines:
-        if not first_section_found and line.strip().startswith('[') and line.strip().endswith(']'):
-            # This is the first section header - replace it
-            new_lines.append(f"[{track_value}]")
-            first_section_found = True
-        else:
-            new_lines.append(line)
-    
-    # Write file
-    with open(str(path), 'w', encoding='utf-8') as f:
-        f.write('\n'.join(new_lines))
-
-
-def folder_exists(path: str) -> bool:
-    """Check if a folder exists"""
-    return Path(path).is_dir()
-
-
-def file_exists(path: str) -> bool:
-    """Check if a file exists"""
-    return Path(path).is_file()
+# NOTE: update_data_track_params() removed - data_track_params.ini should NOT be modified
+# as it contains reference configurations for all tracks in the AC content root

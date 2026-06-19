@@ -1,6 +1,32 @@
 """
-Main Application Initialization for the Assetto Corsa Server Configuration Manager
-This is the refactored version that uses modular tab components
+Main Application for the Assetto Corsa Server Configuration Manager
+
+This module provides the main GUI window that orchestrates configuration management
+for Assetto Corsa servers with support for the Virtual Steward replay plugin.
+
+Architecture:
+- ACServerConfigGUI: Main window that coordinates tab components and config state
+- Tab Components: Each configuration area is a separate tab (server config, VS plugin, advanced options)
+- Config State: Entry list data is maintained in memory and written to disk on save
+- Virtual Steward Integration: Automatic skin modification for bot entries when VS is enabled
+
+Key Responsibilities:
+1. Config File I/O: Load/save INI (server_cfg.ini, entry_list.ini) and YAML files
+2. UI State Management: Populate fields from configs, track unsaved changes
+3. Virtual Steward: Manage bot entry modifications (skin suffix, GUID assignment)
+4. Cross-tab Communication: Coordinate updates between tab components (e.g., VS enable affects entry list)
+
+Configuration Workflow:
+- Load: Reads all configs from server directory into memory (self.configs)
+- Display: Populates UI fields from config data
+- Edit: User modifies configs through UI
+- Save: Validates fields, updates configs, writes to disk, reloads for sync
+
+Virtual Steward Considerations:
+- Bot entries are the first N entries in the entry list
+- Bots require '/VS' suffix on their car skin
+- GUIDs are auto-assigned for bots (8888880 + index) and cleared for players
+- When VS is toggled, entry list is automatically updated
 """
 
 import sys
@@ -187,30 +213,41 @@ class ACServerConfigGUI(QMainWindow):
         self.populate_all_fields()
     
     def populate_all_fields(self):
-        """Populate all widgets in all tabs from loaded configs"""
-        # Server Configuration tab
+        """
+        Populate all widgets in all tabs from loaded configs.
+        
+        Sequence is important:
+        1. Server config first (populates track, ports, etc.)
+        2. Entry list (populates player/bot data)
+        3. Virtual Steward and extra config
+        4. Bot trains config
+        5. Advanced options
+        6. Refresh display and update dependent controls (VS enable state affects entry list visibility)
+        7. Reset unsaved changes flag
+        """
+        # Server Configuration tab (core server settings)
         if 'server_cfg.ini' in self.configs:
             self.populate_server_config(self.configs['server_cfg.ini']['parser'])
 
-        # Entry list
+        # Entry list (player and bot entries)
         if 'entry_list.ini' in self.configs:
             self.populate_entry_list(self.configs['entry_list.ini']['parser'])
 
-        # Virtual Steward
+        # Virtual Steward plugin description
         yaml_config = self.configs.get('extra_cfg.yml', {}).get('data') or {}
         self.populate_server_description(yaml_config)
 
-        # Bot trains
+        # Bot trains configuration (depends on entry list being loaded)
         plugin_config = self.configs.get('plugin_vs_replay_cfg.yml', {}).get('data') or {}
         self.populate_bot_trains_config(plugin_config)
 
-        # Advanced Options
+        # Advanced Options (weather, logging, admin settings)
         server_cfg = self.configs['server_cfg.ini']['parser'] if 'server_cfg.ini' in self.configs else configparser.ConfigParser()
         self.populate_advanced_options(server_cfg, yaml_config)
 
-        # Visual refresh
+        # Refresh the display and update dependent controls
         self.refresh_entry_list_table()
-        self.on_vs_enabled_changed()
+        self.on_vs_enabled_changed()  # Update VS-dependent control visibility
         
         self.has_unsaved_changes = False
     
@@ -306,15 +343,27 @@ class ACServerConfigGUI(QMainWindow):
         self.virtual_steward_tab.vs_enabled_checkbox.setChecked(is_vs_enabled)
     
     def populate_bot_trains_config(self, plugin_config: dict):
-        """Populate bot trains config from plugin_vs_replay_cfg.yml"""
+        """
+        Populate bot trains configuration from plugin_vs_replay_cfg.yml
+        
+        Configuration Key Mappings:
+        - AutoStartOffset: Controls both "bot trains enabled" state and train gap
+          * If 0: Bot trains are disabled
+          * If != 0: Bot trains are enabled, value becomes the gap between bots
+          * Valid range: 5-100 (clamped to slider range)
+        - LoopLap: Number of laps to loop the replay
+        - AutoStart: Number of bots to automatically start (determines num_bots_combo value)
+        """
         tab = self.virtual_steward_tab
         
         if hasattr(tab, 'bot_trains_checkbox') and hasattr(tab, 'train_gap_slider'):
+            # AutoStartOffset is the key that controls both enabled state and gap value
             auto_start_offset = plugin_config.get('AutoStartOffset', 0)
             is_bot_trains_enabled = auto_start_offset != 0
             tab.bot_trains_checkbox.setChecked(is_bot_trains_enabled)
             
             if isinstance(auto_start_offset, (int, float)):
+                # Clamp to valid slider range (5-100)
                 slider_value = max(5, min(100, int(auto_start_offset)))
                 tab.train_gap_slider.setValue(slider_value)
                 tab.train_gap_value_label.setText(str(slider_value))
@@ -324,6 +373,7 @@ class ACServerConfigGUI(QMainWindow):
             tab.loop_lap_input.setText(str(loop_lap) if loop_lap != '' else '')
         
         if hasattr(tab, 'num_bots_combo'):
+            # AutoStart specifies how many bots are configured in the plugin
             auto_start = plugin_config.get('AutoStart', 0)
             auto_start = int(auto_start) if isinstance(auto_start, (int, float)) else 0
             self.update_num_bots_combo_range(set_value=auto_start)
@@ -458,20 +508,35 @@ class ACServerConfigGUI(QMainWindow):
         except ValueError:
             num_bots = 0
         
+        self._apply_vs_skins_to_entry_list(vs_enabled, num_bots)
+        self.refresh_entry_list_table()
+        self.mark_as_modified()
+    
+    def _apply_vs_skins_to_entry_list(self, vs_enabled: bool, num_bots: int):
+        """
+        Apply Virtual Steward skin modifications to entry list.
+        
+        When Virtual Steward is enabled, bot entries (first N entries) need the '/VS'
+        skin suffix. This method handles the common logic for updating skins and GUIDs
+        across both real-time changes (on_num_bots_changed) and file saves (save_config).
+        
+        Args:
+            vs_enabled: Whether Virtual Steward is currently enabled
+            num_bots: Number of bot entries (first N entries in the list)
+        """
         for i, entry_data in enumerate(self.entry_list_data):
             if vs_enabled and i < num_bots:
+                # Bot entry - add /VS suffix if not present
                 skin = entry_data.get('skin', '')
                 if not skin.endswith('/VS'):
                     entry_data['skin'] = skin + '/VS'
                 entry_data['guid'] = str(8888880 + i)
             else:
+                # Regular player entry - remove /VS suffix if present
                 skin = entry_data.get('skin', '')
                 if skin.endswith('/VS'):
                     entry_data['skin'] = skin[:-3]
                 entry_data['guid'] = ''
-        
-        self.refresh_entry_list_table()
-        self.mark_as_modified()
     
     def on_vs_enabled_changed(self):
         """Enable/disable Virtual Steward controls"""
@@ -493,12 +558,13 @@ class ACServerConfigGUI(QMainWindow):
             if hasattr(self.virtual_steward_tab, control_name):
                 getattr(self.virtual_steward_tab, control_name).setEnabled(is_checked)
         
-        if hasattr(self.virtual_steward_tab, 'replay_file_warning'):
-            if is_checked and self.server_root:
-                replay_path = Path(self.server_root) / "replay.acreplay"
-                self.virtual_steward_tab.replay_file_warning.setVisible(not replay_path.exists())
-            else:
-                self.virtual_steward_tab.replay_file_warning.setVisible(False)
+        # Update replay file status display when VS is toggled
+        if is_checked and self.server_root:
+            self.virtual_steward_tab.update_replay_file_status()
+        else:
+            # Clear the replay file status when VS is disabled
+            if hasattr(self.virtual_steward_tab, 'replay_file_status_label'):
+                self.virtual_steward_tab.replay_file_status_label.setText("")
     
     def refresh_entry_list_table(self):
         """Refresh entry list table display"""
@@ -655,7 +721,27 @@ class ACServerConfigGUI(QMainWindow):
         self.server_config_tab.entry_list_table.selectRow(new_row)
     
     def save_config(self):
-        """Save all configurations to files"""
+        """
+        Persist all server and plugin configurations to disk.
+        
+        This method orchestrates a complex multi-file save workflow:
+        1. Validates user input (required fields, numeric constraints)
+        2. Writes to server_cfg.ini (core server settings: name, track, ports, weather)
+        3. Writes to entry_list.ini (player and bot list with VS plugin modifications)
+        4. Writes to plugin YAML configs (VS replay plugin, extra_cfg.yml)
+        5. Writes to text files (admins.txt, blacklist.txt, whitelist.txt)
+        6. Reloads configs from disk to sync UI state with saved files
+        
+        VS Integration:
+        - When Virtual Steward is enabled, adds/removes '/VS' skin suffix on bot entries
+        - Updates EnablePlugins list to include 'VSReplayPlugin'
+        - Persists bot train settings (AutoStartOffset, etc.) to plugin config
+        
+        Error Handling:
+        - Collects all errors without stopping, shows aggregated error message
+        - Prevents config reload if any save operation fails
+        - Returns early if no config is loaded
+        """
         if not self.configs:
             QMessageBox.warning(self, "Warning", "No configuration loaded")
             return
@@ -752,24 +838,11 @@ class ACServerConfigGUI(QMainWindow):
                             num_bots = int(self.virtual_steward_tab.num_bots_combo.currentText())
                         except ValueError:
                             num_bots = 0
-                        
-                        for i, entry_data in enumerate(self.entry_list_data):
-                            if i < num_bots:
-                                skin = entry_data.get("skin", "")
-                                if not skin.endswith("/VS"):
-                                    entry_data["skin"] = skin + "/VS"
-                                entry_data["guid"] = str(8888880 + i)
-                            else:
-                                skin = entry_data.get("skin", "")
-                                if skin.endswith("/VS"):
-                                    entry_data["skin"] = skin[:-3]
-                                entry_data["guid"] = ""
                     else:
-                        for entry_data in self.entry_list_data:
-                            skin = entry_data.get("skin", "")
-                            if "/VS" in skin:
-                                entry_data["skin"] = skin.replace("/VS", "")
-                            entry_data["guid"] = ""
+                        num_bots = 0
+                    
+                    # Apply VS skin modifications to all entries
+                    self._apply_vs_skins_to_entry_list(vs_checked, num_bots)
                     
                     config_manager.write_entry_list_ini(config_path, self.entry_list_data)
                     self.update_num_bots_combo_range()

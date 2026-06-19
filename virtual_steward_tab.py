@@ -84,7 +84,7 @@ class VirtualStewardTab(QWidget):
         
         # Gap slider section
         gap_layout = QHBoxLayout()
-        self.gap_label = QLabel("Train Gap (meters):")
+        self.gap_label = QLabel("Train Gap (frames):")
         gap_layout.addWidget(self.gap_label)
         
         self.train_gap_slider = QSlider(Qt.Horizontal)

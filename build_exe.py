@@ -1,17 +1,4 @@
 #!/usr/bin/env python3
-"""
-Build script for creating executable from Assetto Corsa Server Configuration Manager
-"""
-
-import os
-import sys
-import subprocess
-from pathlib import Path
-
-def create_build_script():
-    """Create a build script for PyInstaller"""
-    
-    build_script = '''#!/usr/bin/env python3
 import os
 import sys
 import subprocess
@@ -48,34 +35,3 @@ try:
 except subprocess.CalledProcessError as e:
     print(f"Build failed with error: {e}")
     sys.exit(1)
-'''
-
-    with open('build_exe.py', 'w') as f:
-        f.write(build_script)
-    
-    # Make it executable
-    os.chmod('build_exe.py', 0o755)
-
-def main():
-    """Main build function"""
-    print("Creating build script for Assetto Corsa Server Manager...")
-    
-    try:
-        # Check if main.py exists
-        if not os.path.exists('main.py'):
-            print("Error: main.py not found in current directory")
-            return False
-            
-        create_build_script()
-        print("Build script 'build_exe.py' created successfully!")
-        print("\nTo build the executable:")
-        print("1. Install PyInstaller: pip install pyinstaller")
-        print("2. Run: python build_exe.py")
-        return True
-        
-    except Exception as e:
-        print(f"Error creating build script: {e}")
-        return False
-
-if __name__ == "__main__":
-    main()
