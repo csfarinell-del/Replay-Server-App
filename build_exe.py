@@ -16,7 +16,7 @@ except ImportError:
     print("PyInstaller not found. Installing...")
     subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
 
-# Build the executable
+# Build the executable with icon
 build_args = [
     'pyinstaller',
     '--name', 'ACServerManager',
@@ -24,7 +24,7 @@ build_args = [
     '--windowed',
     '--clean',
     '--noconsole',
-    '--icon=app_icon.ico' if os.path.exists('app_icon.ico') else '',
+    '--icon=app_icon.ico',
     'main.py'
 ]
 

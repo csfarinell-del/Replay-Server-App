@@ -1090,9 +1090,17 @@ class ACServerConfigGUI(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    icon_path = get_resource_path("files/Icon.png")
-    if icon_path.exists():
-        app.setWindowIcon(QIcon(str(icon_path)))
+    
+    # Set application icon for both window and taskbar
+    try:
+        # Try to load the ICO file directly
+        app.setWindowIcon(QIcon('app_icon.ico'))
+    except:
+        # Fallback to existing icon handling
+        icon_path = get_resource_path("files/Icon.png")
+        if icon_path.exists():
+            app.setWindowIcon(QIcon(str(icon_path)))
+    
     window = ACServerConfigGUI()
     window.show()
     sys.exit(app.exec_())
