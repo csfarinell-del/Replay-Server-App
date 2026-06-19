@@ -27,6 +27,8 @@ python3 -m PyInstaller \
 --clean \
 --noconsole \
 --icon=app_icon.ico \
+--add-data="app_icon.ico:." \
+--add-data="files/Icon.png:files" \
 main.py
 
 if [ $? -eq 0 ]; then

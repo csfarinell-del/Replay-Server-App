@@ -25,6 +25,8 @@ build_args = [
     '--clean',
     '--noconsole',
     '--icon=app_icon.ico',
+    '--add-data', 'app_icon.ico;.',
+    '--add-data', 'files/Icon.png;files',
     'main.py'
 ]
 

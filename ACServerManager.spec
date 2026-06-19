@@ -5,13 +5,14 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('app_icon.ico', '.'), ('files/Icon.png', 'files')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
     noarchive=False,
+    optimize=0,
 )
 pyz = PYZ(a.pure)
 

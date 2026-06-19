@@ -306,7 +306,21 @@ class MainMenuTab(QWidget):
         for server_name, server_path in servers:
             item = QListWidgetItem(server_name)
             item.setData(Qt.UserRole, server_path)
+            
+            # Set font style based on whether server is running
+            font = item.font()
+            if server_path in self.running_processes:
+                font.setBold(True)
+                item.setForeground(Qt.green)  # Green text for running servers
+            else:
+                font.setBold(False)
+                item.setForeground(Qt.black)  # Black text for stopped servers
+            
+            item.setFont(font)
             self.servers_list.addItem(item)
+            
+        # Ensure no server is selected by default
+        self.servers_list.clearSelection()
     
     def on_server_list_item_clicked(self, item):
         """Handle server list item click"""
@@ -434,6 +448,10 @@ class MainMenuTab(QWidget):
         """
         self.start_server_button.setEnabled(start_enabled)
         self.stop_server_button.setEnabled(stop_enabled)
+        
+        # Update server list formatting after button state change
+        if self.current_server_path:
+            self._update_server_list_formatting()
     
     def start_server(self):
         """Start the currently selected server"""
@@ -579,6 +597,9 @@ class MainMenuTab(QWidget):
             terminal = self._get_or_create_terminal(server_path)
             terminal.append(finish_message)
         
+        # Update server list formatting after server stops
+        self._update_server_list_formatting()
+        
         self.server_stopped.emit()
     
     def on_server_error(self, server_path: str, error):
@@ -598,6 +619,9 @@ class MainMenuTab(QWidget):
             terminal = self._get_or_create_terminal(server_path)
             terminal.append(error_message)
         
+        # Update server list formatting after server error
+        self._update_server_list_formatting()
+        
         self.server_stopped.emit()
     
     def _select_server_in_list(self, server_path: str):
@@ -607,6 +631,22 @@ class MainMenuTab(QWidget):
             if item.data(Qt.UserRole) == server_path:
                 self.servers_list.setCurrentItem(item)
                 break
+    
+    def _update_server_list_formatting(self):
+        """Update formatting of server items in the list based on running status"""
+        for i in range(self.servers_list.count()):
+            item = self.servers_list.item(i)
+            server_path = item.data(Qt.UserRole)
+            
+            font = item.font()
+            if server_path in self.running_processes:
+                font.setBold(True)
+                item.setForeground(Qt.green)  # Green text for running servers
+            else:
+                font.setBold(False)
+                item.setForeground(Qt.black)  # Black text for stopped servers
+            
+            item.setFont(font)
     
     def add_server(self):
         """Add a new server from template"""

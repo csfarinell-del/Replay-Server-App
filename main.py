@@ -89,9 +89,19 @@ class ACServerConfigGUI(QMainWindow):
         self.setGeometry(100, 100, 1400, 800)
         
         # Set window icon
-        icon_path = Path(__file__).parent / "files" / "Icon.png"
-        if icon_path.exists():
-            self.setWindowIcon(QIcon(str(icon_path)))
+        try:
+            icon_path = Path(__file__).parent / "files" / "Icon.png"
+            if icon_path.exists():
+                self.setWindowIcon(QIcon(str(icon_path)))
+            else:
+                # Try alternative paths for built executables
+                import os
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                icon_path_alt = os.path.join(current_dir, 'files', 'Icon.png')
+                if os.path.exists(icon_path_alt):
+                    self.setWindowIcon(QIcon(icon_path_alt))
+        except:
+            pass
         
         # Main widget
         main_widget = QWidget()
@@ -1064,6 +1074,23 @@ class ACServerConfigGUI(QMainWindow):
     
     def closeEvent(self, event):
         """Handle application close event"""
+        # Check if any servers are running
+        servers_running = False
+        if self.main_menu_tab and hasattr(self.main_menu_tab, 'running_processes'):
+            servers_running = len(self.main_menu_tab.running_processes) > 0
+        
+        if servers_running:
+            result = QMessageBox.question(
+                self,
+                "Servers Running",
+                "Some servers are currently running. Closing the application will stop all servers. Do you want to continue?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            if result == QMessageBox.No:
+                event.ignore()
+                return
+        
         # Kill all running servers
         if self.main_menu_tab:
             self.main_menu_tab.kill_all_servers()
@@ -1092,14 +1119,55 @@ def main():
     app = QApplication(sys.argv)
     
     # Set application icon for both window and taskbar
+    icon_set = False
+    
+    # Try to load the ICO file directly (for development)
     try:
-        # Try to load the ICO file directly
         app.setWindowIcon(QIcon('app_icon.ico'))
+        icon_set = True
     except:
-        # Fallback to existing icon handling
-        icon_path = get_resource_path("files/Icon.png")
-        if icon_path.exists():
-            app.setWindowIcon(QIcon(str(icon_path)))
+        pass
+    
+    # If that failed, try alternative methods
+    if not icon_set:
+        try:
+            # Try to load from resources (for built executables)
+            icon_path = get_resource_path("files/Icon.png")
+            if icon_path.exists():
+                app.setWindowIcon(QIcon(str(icon_path)))
+                icon_set = True
+        except:
+            pass
+    
+    # If still no icon set, try to find it in the current directory
+    if not icon_set:
+        try:
+            import os
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            icon_path = os.path.join(current_dir, 'app_icon.ico')
+            if os.path.exists(icon_path):
+                app.setWindowIcon(QIcon(icon_path))
+                icon_set = True
+        except:
+            pass
+    
+    # Final fallback - try to load from the files directory relative to main.py
+    if not icon_set:
+        try:
+            import os
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            files_dir = os.path.join(current_dir, 'files')
+            icon_path = os.path.join(files_dir, 'Icon.png')
+            if os.path.exists(icon_path):
+                app.setWindowIcon(QIcon(icon_path))
+                icon_set = True
+        except:
+            pass
+    
+    # Final fallback - no icon
+    if not icon_set:
+        icon = QIcon()
+        app.setWindowIcon(icon)
     
     window = ACServerConfigGUI()
     window.show()

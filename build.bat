@@ -31,7 +31,16 @@ python -m PyInstaller ^
 --clean ^
 --noconsole ^
 --icon=app_icon.ico ^
+--add-data="app_icon.ico;." ^
+--add-data="files/Icon.png;files" ^
 main.py
+
+REM Verify icon was included
+if exist "dist\ACServerManager.exe" (
+    echo Executable built successfully with icon
+) else (
+    echo Warning: Executable not found in dist folder
+)
 
 if %errorlevel% equ 0 (
     echo.
