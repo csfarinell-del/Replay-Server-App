@@ -328,7 +328,7 @@ class MainMenuTab(QWidget):
             font = name_item.font()
             if server_path in self.running_processes:
                 font.setBold(True)
-                name_item.setForeground(Qt.green)  # Green text for running servers
+                name_item.setForeground(Qt.darkGreen)  # Green text for running servers
             else:
                 font.setBold(False)
                 name_item.setForeground(Qt.black)  # Black text for stopped servers
@@ -508,6 +508,24 @@ class MainMenuTab(QWidget):
                     # If still has unsaved changes after save attempt, don't start server
                     return
         
+        # Validate pitbox limits
+        try:
+            track_name = self._get_selected_track_name()
+            if track_name:
+                max_entries = self._get_max_entries_from_track(track_name)
+                entry_list_count = len(self.parent_window.entry_list_data)
+                
+                if entry_list_count > max_entries:
+                    QMessageBox.warning(
+                        self,
+                        "Entry List Limit",
+                        f"Check entry list. Max entries is {max_entries}."
+                    )
+                    return
+        except Exception as e:
+            # If we can't validate, proceed with starting server (don't block user)
+            pass
+        
         try:
             # Determine the server executable path based on platform
             if sys.platform.startswith('win'):
@@ -565,6 +583,54 @@ class MainMenuTab(QWidget):
                 
         except Exception as e:
             self.append_terminal_output(f"Error starting server: {str(e)}")
+    
+    def _get_selected_track_name(self) -> str:
+        """Get the selected track name from server configuration"""
+        if not self.parent_window.server_root:
+            return ""
+        
+        # Get track from server config
+        try:
+            track_widget = self.parent_window.server_config_tab.server_config_widgets.get('TRACK')
+            if track_widget:
+                track_display = track_widget.text()
+                if track_display in self.parent_window.track_display_map:
+                    return self.parent_window.track_display_map[track_display]
+                else:
+                    # Try to get original track name from property
+                    original_track = track_widget.property('original_track')
+                    if original_track:
+                        return original_track
+                    # Fallback to display name
+                    return track_display.lower().replace(' ', '_')
+        except Exception:
+            pass
+        
+        return ""
+    
+    def _get_max_entries_from_track(self, track_name: str) -> int:
+        """Get max entries from ui_track.json file for the selected track"""
+        if not self.parent_window.content_root:
+            return 0
+            
+        try:
+            # Construct path to ui_track.json
+            track_path = Path(self.parent_window.content_root) / "tracks" / track_name / "ui" / "ui_track.json"
+            
+            if track_path.exists():
+                import json
+                
+                with open(track_path, 'r') as f:
+                    data = json.load(f)
+                    
+                # Look for pitboxes value
+                if 'pitboxes' in data:
+                    return int(data['pitboxes'])
+        except Exception:
+            pass
+            
+        # Default to reasonable value if we can't find it
+        return 64
     
     def stop_server(self):
         """Stop the currently selected server"""
@@ -709,7 +775,7 @@ class MainMenuTab(QWidget):
             font = name_item.font()
             if server_path in self.running_processes:
                 font.setBold(True)
-                name_item.setForeground(Qt.green)  # Green text for running servers
+                name_item.setForeground(Qt.darkGreen)  # Dark green text for running servers
             else:
                 font.setBold(False)
                 name_item.setForeground(Qt.black)  # Black text for stopped servers
