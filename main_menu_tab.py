@@ -25,14 +25,13 @@ Signals:
 
 import os
 import sys
-import subprocess
 from pathlib import Path
 from typing import Dict
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, 
-    QListWidget, QListWidgetItem, QFileDialog, QMessageBox, QInputDialog,
-    QTextEdit, QSplitter, QFrame, QSizePolicy
+    QFileDialog, QMessageBox, QInputDialog,
+    QTextEdit, QFrame, QSizePolicy, QTableWidget, QTableWidgetItem, QHeaderView
 )
 from PyQt5.QtCore import Qt, QProcess, pyqtSignal
 from PyQt5.QtGui import QFont
@@ -56,9 +55,13 @@ class MainMenuTab(QWidget):
         self.server_terminals: Dict[str, QTextEdit] = {}  # path -> terminal widget
         self.current_server_path = None
         self.running_processes: Dict[str, QProcess] = {}  # path -> QProcess for running servers
+        self.server_user_counts: Dict[str, int] = {}  # path -> user count
         
         # Auto-scroll tracking
         self.terminal_auto_scroll_enabled = True
+        
+        # Custom role for storing user count data
+        self.USER_COUNT_ROLE = Qt.UserRole + 1
         
         self.init_ui()
     
@@ -131,10 +134,20 @@ class MainMenuTab(QWidget):
         servers_label.setFont(servers_font)
         left_layout.addWidget(servers_label)
         
-        self.servers_list = QListWidget()
+        # Create a table widget for two-column display
+        self.servers_list = QTableWidget()
+        self.servers_list.setColumnCount(2)
+        self.servers_list.setHorizontalHeaderLabels(["Server Name", "Connected Drivers"])
+        self.servers_list.horizontalHeader().setStretchLastSection(True)
+        self.servers_list.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.servers_list.setSelectionBehavior(QTableWidget.SelectRows)
         self.servers_list.itemClicked.connect(self.on_server_list_item_clicked)
         self.servers_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         left_layout.addWidget(self.servers_list, 1)
+        
+        # Set column widths
+        self.servers_list.setColumnWidth(0, 200)  # Server name column
+        self.servers_list.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)  # Server name column scales to content
         
         # Server management buttons
         buttons_layout = QHBoxLayout()
@@ -296,7 +309,7 @@ class MainMenuTab(QWidget):
     
     def populate_servers_list(self):
         """Populate the servers list widget"""
-        self.servers_list.clear()
+        self.servers_list.setRowCount(0)
         
         if not self.parent_window.servers_parent_dir:
             return
@@ -304,20 +317,33 @@ class MainMenuTab(QWidget):
         servers = file_manager.list_server_directories(self.parent_window.servers_parent_dir)
         
         for server_name, server_path in servers:
-            item = QListWidgetItem(server_name)
-            item.setData(Qt.UserRole, server_path)
+            row = self.servers_list.rowCount()
+            self.servers_list.insertRow(row)
+            
+            # Server name cell
+            name_item = QTableWidgetItem(server_name)
+            name_item.setData(Qt.UserRole, server_path)
             
             # Set font style based on whether server is running
-            font = item.font()
+            font = name_item.font()
             if server_path in self.running_processes:
                 font.setBold(True)
-                item.setForeground(Qt.green)  # Green text for running servers
+                name_item.setForeground(Qt.green)  # Green text for running servers
             else:
                 font.setBold(False)
-                item.setForeground(Qt.black)  # Black text for stopped servers
+                name_item.setForeground(Qt.black)  # Black text for stopped servers
             
-            item.setFont(font)
-            self.servers_list.addItem(item)
+            name_item.setFont(font)
+            self.servers_list.setItem(row, 0, name_item)
+            
+            # Connected drivers cell (initially 0)
+            user_count = self.server_user_counts.get(server_path, 0)
+            count_item = QTableWidgetItem(f"{user_count} drivers connected")
+            count_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            count_item.setForeground(Qt.black)  # Black text for stopped servers
+            count_item.setFlags(count_item.flags() & ~Qt.ItemIsEditable)
+            
+            self.servers_list.setItem(row, 1, count_item)
             
         # Ensure no server is selected by default
         self.servers_list.clearSelection()
@@ -340,7 +366,9 @@ class MainMenuTab(QWidget):
                 if self.parent_window.has_unsaved_changes:
                     return
         
-        server_path = item.data(Qt.UserRole)
+        # Get server path from the first column (server name)
+        row = item.row()
+        server_path = self.servers_list.item(row, 0).data(Qt.UserRole)
         self.current_server_path = server_path
         self.parent_window.server_root = server_path
         self.parent_window.settings.setValue('server_root', server_path)
@@ -463,6 +491,23 @@ class MainMenuTab(QWidget):
             self.append_terminal_output("Error: This server is already running")
             return
         
+        # Check for unsaved changes
+        if self.parent_window.has_unsaved_changes:
+            result = QMessageBox.question(
+                self,
+                "Unsaved Changes",
+                "You have unsaved changes. Would you like to save before starting the server?",
+                QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+                QMessageBox.Save
+            )
+            if result == QMessageBox.Cancel:
+                return
+            elif result == QMessageBox.Save:
+                self.parent_window.save_config()
+                if self.parent_window.has_unsaved_changes:
+                    # If still has unsaved changes after save attempt, don't start server
+                    return
+        
         try:
             # Determine the server executable path based on platform
             if sys.platform.startswith('win'):
@@ -557,6 +602,12 @@ class MainMenuTab(QWidget):
             process = self.running_processes[server_path]
             output = process.readAllStandardOutput().data().decode('utf-8', errors='replace')
             if output.strip():
+                # Parse for user connection/disconnection messages
+                if "has connected" in output:
+                    self.server_user_counts[server_path] = max(0, self.server_user_counts.get(server_path, 0) + 1)
+                elif "has disconnected" in output:
+                    self.server_user_counts[server_path] = max(0, self.server_user_counts.get(server_path, 0) - 1)
+                
                 # Only append if we're viewing this server's terminal
                 if server_path == self.current_server_path:
                     self.append_terminal_output(output.strip())
@@ -564,6 +615,9 @@ class MainMenuTab(QWidget):
                     # Still add to history, just don't display
                     terminal = self._get_or_create_terminal(server_path)
                     terminal.append(output.strip())
+                
+                # Update server list formatting with user count
+                self._update_server_list_formatting()
     
     def handle_server_error(self, server_path: str):
         """Handle error output from the server process"""
@@ -585,6 +639,10 @@ class MainMenuTab(QWidget):
         # Remove from running processes
         if server_path in self.running_processes:
             del self.running_processes[server_path]
+        
+        # Remove user count tracking
+        if server_path in self.server_user_counts:
+            del self.server_user_counts[server_path]
         
         finish_message = f"\nServer process finished with exit code: {exit_code} (Status: {exit_status})"
         
@@ -608,6 +666,10 @@ class MainMenuTab(QWidget):
         if server_path in self.running_processes:
             del self.running_processes[server_path]
         
+        # Remove user count tracking
+        if server_path in self.server_user_counts:
+            del self.server_user_counts[server_path]
+        
         error_message = f"Server process error: {error}"
         
         # Only update buttons if this is the currently viewed server
@@ -626,27 +688,45 @@ class MainMenuTab(QWidget):
     
     def _select_server_in_list(self, server_path: str):
         """Select a server in the list by path"""
-        for i in range(self.servers_list.count()):
-            item = self.servers_list.item(i)
-            if item.data(Qt.UserRole) == server_path:
-                self.servers_list.setCurrentItem(item)
+        for i in range(self.servers_list.rowCount()):
+            item = self.servers_list.item(i, 0)
+            if item and item.data(Qt.UserRole) == server_path:
+                self.servers_list.setCurrentCell(i, 0)
                 break
     
     def _update_server_list_formatting(self):
         """Update formatting of server items in the list based on running status"""
-        for i in range(self.servers_list.count()):
-            item = self.servers_list.item(i)
-            server_path = item.data(Qt.UserRole)
+        for i in range(self.servers_list.rowCount()):
+            name_item = self.servers_list.item(i, 0)
+            count_item = self.servers_list.item(i, 1)
             
-            font = item.font()
+            if not name_item:
+                continue
+                
+            server_path = name_item.data(Qt.UserRole)
+            
+            # Update font and color for server name
+            font = name_item.font()
             if server_path in self.running_processes:
                 font.setBold(True)
-                item.setForeground(Qt.green)  # Green text for running servers
+                name_item.setForeground(Qt.green)  # Green text for running servers
             else:
                 font.setBold(False)
-                item.setForeground(Qt.black)  # Black text for stopped servers
+                name_item.setForeground(Qt.black)  # Black text for stopped servers
             
-            item.setFont(font)
+            name_item.setFont(font)
+            
+            # Update user count display in the second column
+            user_count = self.server_user_counts.get(server_path, 0)
+            if server_path in self.running_processes:
+                count_item.setText(f"{user_count} drivers connected")
+                count_item.setForeground(Qt.black)  # Black text for running servers
+            else:
+                count_item.setText("0 drivers connected")
+                count_item.setForeground(Qt.black)  # Black text for stopped servers
+        
+        # Force update of the list view to show changes
+        self.servers_list.update()
     
     def add_server(self):
         """Add a new server from template"""

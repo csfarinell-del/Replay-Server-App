@@ -1,0 +1,5 @@
+GNU AFFERO GENERAL PUBLIC LICENSE
+Version 3, 19 November 2007
+
+(Full AGPL text here OR official file from upstream project)
+https://www.gnu.org/licenses/agpl-3.0.txt

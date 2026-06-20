@@ -1,0 +1,10 @@
+AssettoServer
+Copyright (C) 2025 Niewiarowski, compujuckel
+
+This software is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+
+This distribution includes AssettoServer binaries. AssettoServer is redistributed under the terms of the AGPL-3.0 license.
+
+All original copyright notices and author attributions have been preserved.
+
+See LICENSE file for full license text.

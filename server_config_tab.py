@@ -55,6 +55,7 @@ class ServerConfigTab(QWidget):
         name_layout = QHBoxLayout()
         name_layout.addWidget(QLabel("Server Name:"))
         self.server_config_widgets['NAME'] = QLineEdit()
+        self.server_config_widgets['NAME'].textChanged.connect(self.parent_window.mark_as_modified)
         name_layout.addWidget(self.server_config_widgets['NAME'])
         form_layout.addLayout(name_layout)
         
@@ -94,6 +95,7 @@ class ServerConfigTab(QWidget):
         udp_layout = QHBoxLayout()
         udp_layout.addWidget(QLabel("UDP Port:"))
         self.server_config_widgets['UDP_PORT'] = QLineEdit()
+        self.server_config_widgets['UDP_PORT'].textChanged.connect(self.parent_window.mark_as_modified)
         udp_layout.addWidget(self.server_config_widgets['UDP_PORT'])
         udp_layout.addStretch()
         form_layout.addLayout(udp_layout)
@@ -102,6 +104,7 @@ class ServerConfigTab(QWidget):
         tcp_layout = QHBoxLayout()
         tcp_layout.addWidget(QLabel("TCP Port:"))
         self.server_config_widgets['TCP_PORT'] = QLineEdit()
+        self.server_config_widgets['TCP_PORT'].textChanged.connect(self.parent_window.mark_as_modified)
         tcp_layout.addWidget(self.server_config_widgets['TCP_PORT'])
         tcp_layout.addStretch()
         form_layout.addLayout(tcp_layout)
@@ -110,6 +113,7 @@ class ServerConfigTab(QWidget):
         http_layout = QHBoxLayout()
         http_layout.addWidget(QLabel("HTTP Port:"))
         self.server_config_widgets['HTTP_PORT'] = QLineEdit()
+        self.server_config_widgets['HTTP_PORT'].textChanged.connect(self.parent_window.mark_as_modified)
         http_layout.addWidget(self.server_config_widgets['HTTP_PORT'])
         http_layout.addStretch()
         form_layout.addLayout(http_layout)
@@ -117,9 +121,11 @@ class ServerConfigTab(QWidget):
         # Time of day
         time_layout = QHBoxLayout()
         self.server_config_widgets['TIME_OF_DAY_MULT'] = QCheckBox("Time of Day (Dynamic)")
+        self.server_config_widgets['TIME_OF_DAY_MULT'].stateChanged.connect(self.parent_window.mark_as_modified)
         time_layout.addWidget(self.server_config_widgets['TIME_OF_DAY_MULT'])
         time_layout.addWidget(QLabel("Time:"))
         self.server_config_widgets['TIME_OF_DAY'] = QComboBox()
+        self.server_config_widgets['TIME_OF_DAY'].currentTextChanged.connect(self.parent_window.mark_as_modified)
         self.server_config_widgets['TIME_OF_DAY'].addItems(['0000', '0300', '0600', '0900', '1200', '1500', '1800', '2100'])
         time_layout.addWidget(self.server_config_widgets['TIME_OF_DAY'])
         time_layout.addStretch()
@@ -130,6 +136,7 @@ class ServerConfigTab(QWidget):
         # Server Description
         left_layout.addWidget(QLabel("Server Description:"), 0)
         self.server_config_widgets['SERVER_DESCRIPTION'] = QPlainTextEdit()
+        self.server_config_widgets['SERVER_DESCRIPTION'].textChanged.connect(self.parent_window.mark_as_modified)
         left_layout.addWidget(self.server_config_widgets['SERVER_DESCRIPTION'], 1)
         
         # Save Changes button (left-aligned)

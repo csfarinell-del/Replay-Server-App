@@ -1,4 +1,3 @@
-import sys
 from setuptools import setup, find_packages
 
 # Read the README file for long description
@@ -6,21 +5,21 @@ try:
     with open("README.md", "r", encoding="utf-8") as fh:
         long_description = fh.read()
 except FileNotFoundError:
-    long_description = "Assetto Corsa Server Configuration Manager"
+    long_description = "Virtual Steward Server Configuration Manager"
 
 setup(
-    name="assetto-corsa-server-manager",
+    name="replay-server-app",
     version="1.0.0",
     author="AC Server Manager Team",
     author_email="",
-    description="A GUI application for managing Assetto Corsa server configurations",
+    description="A GUI application for managing Assetto Corsa server configurations with Virtual Steward plugin support",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/assetto-corsa-server-manager",
+    url="https://github.com/csfarinell-del/Replay-Server-App",
     packages=find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
+        "License :: GNU General Public License v3 (GPLv3)",
         "Operating System :: OS Independent",
         "Development Status :: 4 - Beta",
         "Intended Audience :: End Users/Desktop",

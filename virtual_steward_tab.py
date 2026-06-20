@@ -6,11 +6,14 @@ Handles Virtual Steward plugin configuration
 from pathlib import Path
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QCheckBox,
-    QSlider, QPushButton, QMessageBox
+    QSlider, QPushButton, QMessageBox, QComboBox, QFileDialog
 )
 from PyQt5.QtCore import Qt
-
 import file_manager
+import shutil
+from PyQt5.QtGui import QFont
+#from PyQt5.QtWidgets import QComboBox
+#from PyQt5.QtWidgets import QFileDialog
 
 
 class VirtualStewardTab(QWidget):
@@ -37,7 +40,6 @@ class VirtualStewardTab(QWidget):
         main_layout = QVBoxLayout()
         
         # Virtual Steward Configuration title
-        from PyQt5.QtGui import QFont
         vs_title = QLabel("Virtual Steward Configuration")
         vs_font = QFont()
         vs_font.setPointSize(12)
@@ -47,7 +49,7 @@ class VirtualStewardTab(QWidget):
         
         # Virtual Steward Enable checkbox
         self.vs_enabled_checkbox = QCheckBox("Enable Virtual Steward Replay Plugin")
-        self.vs_enabled_checkbox.stateChanged.connect(self.on_vs_enabled_changed)
+        self.vs_enabled_checkbox.stateChanged.connect(lambda: self.parent_window.mark_as_modified())
         main_layout.addWidget(self.vs_enabled_checkbox)
         
         # Replay file section
@@ -68,6 +70,7 @@ class VirtualStewardTab(QWidget):
         self.loop_lap_input = QLineEdit()
         self.loop_lap_input.setPlaceholderText("Leave empty to loop entire race")
         self.loop_lap_input.setEnabled(False)
+        self.loop_lap_input.textChanged.connect(self.parent_window.mark_as_modified)
         lap_layout.addWidget(self.lap_label)
         lap_layout.addWidget(self.loop_lap_input)
         lap_layout.addStretch()
@@ -77,7 +80,7 @@ class VirtualStewardTab(QWidget):
         bot_trains_layout = QHBoxLayout()
         self.bot_trains_checkbox = QCheckBox("Enable Bot Trains")
         self.bot_trains_checkbox.setEnabled(False)
-        self.bot_trains_checkbox.stateChanged.connect(self.on_bot_trains_changed)
+        self.bot_trains_checkbox.stateChanged.connect(lambda: self.parent_window.mark_as_modified())
         bot_trains_layout.addWidget(self.bot_trains_checkbox)
         bot_trains_layout.addStretch()
         main_layout.addLayout(bot_trains_layout)
@@ -93,7 +96,7 @@ class VirtualStewardTab(QWidget):
         self.train_gap_slider.setValue(5)
         # Initially disabled - will be controlled by VS checkbox state
         self.train_gap_slider.setEnabled(False)
-        self.train_gap_slider.valueChanged.connect(self.on_gap_slider_changed)
+        self.train_gap_slider.valueChanged.connect(lambda: self.parent_window.mark_as_modified())
         gap_layout.addWidget(self.train_gap_slider)
         
         self.train_gap_value_label = QLabel("5")
@@ -103,7 +106,6 @@ class VirtualStewardTab(QWidget):
         main_layout.addLayout(gap_layout)
         
         # Number of bots section
-        from PyQt5.QtWidgets import QComboBox
         
         num_bots_layout = QHBoxLayout()
         self.num_bots_label = QLabel("Number of Bots:")
@@ -111,7 +113,7 @@ class VirtualStewardTab(QWidget):
         
         self.num_bots_combo = QComboBox()
         self.num_bots_combo.setEnabled(False)
-        self.num_bots_combo.currentIndexChanged.connect(self.parent_window.on_num_bots_changed)
+        self.num_bots_combo.currentTextChanged.connect(lambda: self.parent_window.mark_as_modified())
         num_bots_layout.addWidget(self.num_bots_combo)
         
         num_bots_layout.addStretch()
@@ -125,10 +127,14 @@ class VirtualStewardTab(QWidget):
         support_layout.setAlignment(Qt.AlignCenter)
         
         support_text = QLabel("Support the creator of Virtual Steward on Patreon")
+        support_font = QFont()
+        support_font.setPointSize(12)
+        support_text.setFont(support_font)
         support_layout.addWidget(support_text, alignment=Qt.AlignCenter)
         
         patreon_link = QLabel('<a href="https://www.patreon.com/cw/VirtualSteward">https://www.patreon.com/cw/VirtualSteward</a>')
         patreon_link.setOpenExternalLinks(True)
+        patreon_link.setFont(support_font)
         support_layout.addWidget(patreon_link, alignment=Qt.AlignCenter)
         
         main_layout.addLayout(support_layout)
@@ -205,7 +211,6 @@ class VirtualStewardTab(QWidget):
             QMessageBox.warning(self, "Error", "Please select a server first")
             return
         
-        from PyQt5.QtWidgets import QFileDialog
         
         file_path, _ = QFileDialog.getOpenFileName(
             self,
@@ -219,7 +224,7 @@ class VirtualStewardTab(QWidget):
                 # Copy replay file to server root
                 dest_path = Path(self.parent_window.server_root) / "replay.acreplay"
                 
-                import shutil
+                
                 shutil.copy(file_path, str(dest_path))
                 
                 QMessageBox.information(
