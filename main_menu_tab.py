@@ -260,6 +260,13 @@ class MainMenuTab(QWidget):
         main_layout.addLayout(content_layout, 1)
         
         self.setLayout(main_layout)
+
+        if self.servers_list.rowCount() > 0:
+            self.servers_list.selectRow(0)
+            self.servers_list.selectColumn(0)
+            # Load the first server's configuration
+            first_server_path = self.servers_list.item(0, 0).data(Qt.UserRole)
+            self._select_server_in_list(first_server_path)
     
     def browse_ac_root(self):
         """Browse for AC content root folder"""
@@ -344,9 +351,15 @@ class MainMenuTab(QWidget):
             count_item.setFlags(count_item.flags() & ~Qt.ItemIsEditable)
             
             self.servers_list.setItem(row, 1, count_item)
+            self.has_unsaved_changes = False
             
-        # Ensure no server is selected by default
-        self.servers_list.clearSelection()
+        # Select the first server if there are any servers and no selection exists
+        if self.servers_list.rowCount() > 0 and self.servers_list.selectedItems() == []:
+            self.servers_list.selectRow(0)
+            self.servers_list.selectColumn(0)
+            # Load the first server's configuration
+            first_server_path = self.servers_list.item(0, 0).data(Qt.UserRole)
+            self._select_server_in_list(first_server_path)
     
     def on_server_list_item_clicked(self, item):
         """Handle server list item click"""
@@ -365,7 +378,7 @@ class MainMenuTab(QWidget):
                 self.parent_window.save_config()
                 if self.parent_window.has_unsaved_changes:
                     return
-        
+
         # Get server path from the first column (server name)
         row = item.row()
         server_path = self.servers_list.item(row, 0).data(Qt.UserRole)
@@ -388,7 +401,8 @@ class MainMenuTab(QWidget):
         # Update virtual steward replay file status
         if self.parent_window.virtual_steward_tab:
             self.parent_window.virtual_steward_tab.on_server_selected()
-    
+
+
     def update_terminal_display(self):
         """Update the terminal output to show the current server's history"""
         if not self.current_server_path:
@@ -758,6 +772,8 @@ class MainMenuTab(QWidget):
             item = self.servers_list.item(i, 0)
             if item and item.data(Qt.UserRole) == server_path:
                 self.servers_list.setCurrentCell(i, 0)
+                # Ensure the selection is actually made
+                self.servers_list.setCurrentItem(item)
                 break
     
     def _update_server_list_formatting(self):
@@ -810,12 +826,24 @@ class MainMenuTab(QWidget):
     
     def duplicate_server(self):
         """Duplicate selected server"""
+        
         selected = self.servers_list.currentItem()
+        selected = self.servers_list.item(selected.row(), 0) if selected else None  # Ensure we get the server name item
         if not selected:
             QMessageBox.warning(self, "Error", "Please select a server to duplicate")
             return
         
         server_path = selected.data(Qt.UserRole)
+        
+        # Validate that we have a valid server path
+        if not server_path:
+            QMessageBox.warning(self, "Error", "Invalid server selection")
+            return
+            
+        # Validate that servers parent directory is set
+        if not self.parent_window.servers_parent_dir:
+            QMessageBox.warning(self, "Error", "Please select a server folder first")
+            return
         
         try:
             new_server_path = file_manager.duplicate_server(server_path, self.parent_window.servers_parent_dir)
@@ -828,6 +856,7 @@ class MainMenuTab(QWidget):
     def rename_server(self):
         """Rename selected server"""
         selected = self.servers_list.currentItem()
+        selected = self.servers_list.item(selected.row(), 0) if selected else None  # Ensure we get the server name item
         if not selected:
             QMessageBox.warning(self, "Error", "Please select a server to rename")
             return
@@ -856,18 +885,19 @@ class MainMenuTab(QWidget):
             QMessageBox.critical(self, "Error", f"Failed to rename server: {str(e)}")
     
     def delete_server_folder(self):
-        """Delete selected servers"""
-        selected_items = self.servers_list.selectedItems()
-        if not selected_items:
-            QMessageBox.warning(self, "Error", "Please select servers to delete")
+        """Delete selected server"""
+        selected = self.servers_list.currentItem()
+        selected = self.servers_list.item(selected.row(), 0) if selected else None  # Ensure we get the server name item
+        #selected_items = self.servers_list.selectedItems()
+        if not selected:
+            QMessageBox.warning(self, "Error", "Please select server to delete")
             return
         
         # Confirm deletion
-        count = len(selected_items)
         result = QMessageBox.warning(
             self,
             "Confirm Delete",
-            f"Delete {count} server(s)? This cannot be undone.",
+            f"Delete server? This cannot be undone.",
             QMessageBox.Ok | QMessageBox.Cancel,
             QMessageBox.Cancel
         )
@@ -876,8 +906,9 @@ class MainMenuTab(QWidget):
             return
         
         # Delete servers
-        paths = [item.data(Qt.UserRole) for item in selected_items]
-        errors = file_manager.delete_server_folders(paths)
+        #path = selected.data(Qt.UserRole)
+        path = selected.data(Qt.UserRole)
+        errors = file_manager.delete_server_folders(path)
         
         # Clear current selection
         self.parent_window.server_root = None
@@ -888,4 +919,4 @@ class MainMenuTab(QWidget):
         if errors:
             QMessageBox.warning(self, "Errors", "\n".join(errors))
         else:
-            QMessageBox.information(self, "Success", f"Deleted {count} server(s)")
+            QMessageBox.information(self, "Success", f"Deleted selected server")

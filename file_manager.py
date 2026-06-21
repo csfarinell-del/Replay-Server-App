@@ -213,25 +213,28 @@ def rename_server_folder(old_path: str, new_name: str) -> str:
     return str(new_path)
 
 
-def delete_server_folders(folder_paths: List[str]) -> List[str]:
+def delete_server_folders(folder_path) -> str:
     """
-    Delete server folders.
+    Delete server folder.
     
     Args:
-        folder_paths: List of server paths to delete
+        folder_path: Path of the server folder to delete
     
     Returns:
         List of error messages (empty if all succeeded)
     """
     errors = []
     
-    for path in folder_paths:
-        try:
-            path = Path(path)
-            if path.exists():
-                shutil.rmtree(str(path))
-        except Exception as e:
-            errors.append(f"Failed to delete {path}: {str(e)}")
+    #for path in folder_paths:
+    try:
+        path = Path(folder_path)
+        if path.exists():
+            shutil.rmtree(str(path))
+    except PermissionError:
+        errors.append(f"Failed to delete {path}: Permission denied")
+    except Exception as e:
+        return
+     #    errors.append(f"Failed to delete {path}: {str(e)}")
     
     return errors
 
