@@ -25,25 +25,6 @@ A comprehensive GUI application for managing Assetto Corsa server configurations
 2. Install dependencies: `pip install PyQt5` or `pip install PyQt6`
 3. Run the application: `python main.py`
 
-## Usage
-
-### Main Menu Tab
-- Select AC content root directory to enable content discovery
-- Manage server folders using the CRUD operations (Add, Duplicate, Rename, Delete)
-- Create new servers from the VS Server template
-
-### Server Configuration Tab
-- Edit server information including name and track selection
-- Configure network ports (UDP, TCP, HTTP)
-- Set time of day settings
-- Manage entry list with car/skin selection for each driver
-- Double-click on car or skin columns to open selection dialogs
-
-### Virtual Steward Tab
-- Configure replay file handling for Virtual Steward plugin
-- Set bot train parameters including gap distance and number of bots
-- Enable/disable Patreon support features
-
 ## Project Structure
 
 ```
@@ -62,6 +43,8 @@ A comprehensive GUI application for managing Assetto Corsa server configurations
 ```
 
 ## How to Use the Built Application
+
+###### Note: VS Server Folder and ACServerManager must be in the same directory. VS Server is template server for "Add Server" button.
 
 1. **Launch the Application**: Run `main.py` or the compiled executable
 
@@ -135,9 +118,9 @@ A comprehensive GUI application for managing Assetto Corsa server configurations
 - **Loading Image Url**: URL for loading screen image
 - **Client Send Interval HZ**: Network update frequency (default 33)
 - **Player Loading Timeout Minutes**: Time to wait for player connection (default 10)
-- **Admins**: List of admin GUIDs with server access
-- **Blacklist**: List of banned GUIDs
-- **Whitelist**: List of allowed GUIDs
+- **Admins**: List of admin Steam IDs with server access
+- **Blacklist**: List of banned Steam IDs
+- **Whitelist**: List of allowed Steam IDs
 
 ## Features
 

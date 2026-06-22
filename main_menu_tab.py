@@ -109,9 +109,9 @@ class MainMenuTab(QWidget):
         
         # Server folder section
         server_root_layout = QHBoxLayout()
-        server_root_label = QLabel("Server Folder (parent dir):")
+        server_root_label = QLabel("Server Folder:")
         self.server_root_input = PathLineEdit()
-        self.server_root_input.setPlaceholderText("Path to folder containing servers...")
+        self.server_root_input.setPlaceholderText("Path to folder your servers will live in...")
         self.server_root_input.focusLost.connect(self.on_server_path_edited)
         server_root_browse = QPushButton("Browse...")
         server_root_browse.clicked.connect(self.browse_server_root)
