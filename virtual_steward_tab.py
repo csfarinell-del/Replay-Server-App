@@ -81,6 +81,7 @@ class VirtualStewardTab(QWidget):
         self.bot_trains_checkbox = QCheckBox("Enable Bot Trains")
         self.bot_trains_checkbox.setEnabled(False)
         self.bot_trains_checkbox.stateChanged.connect(lambda: self.parent_window.mark_as_modified())
+        self.bot_trains_checkbox.stateChanged.connect(self.on_bot_trains_changed)
         bot_trains_layout.addWidget(self.bot_trains_checkbox)
         bot_trains_layout.addStretch()
         main_layout.addLayout(bot_trains_layout)

@@ -305,11 +305,11 @@ class ACServerConfigGUI(QMainWindow):
             widgets['TIME_OF_DAY_MULT'].setChecked(val != '0')
 
         # SUN_ANGLE to TIME_OF_DAY mapping
-        tod_times = [0, 300, 600, 900, 1200, 1500, 1800, 2100]
+        tod_times = [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000, 2100, 2200, 2300]
         if 'SUN_ANGLE' in server_section:
             try:
                 sun = float(server_section['SUN_ANGLE'])
-                tod_int = round((sun + 135) / 0.15)
+                tod_int = round((sun + 90) / 0.15)
                 closest = min(tod_times, key=lambda t: abs(t - tod_int))
                 idx = tod_times.index(closest)
                 widgets['TIME_OF_DAY'].setCurrentIndex(idx)

@@ -126,7 +126,7 @@ class ServerConfigTab(QWidget):
         time_layout.addWidget(QLabel("Time:"))
         self.server_config_widgets['TIME_OF_DAY'] = QComboBox()
         self.server_config_widgets['TIME_OF_DAY'].currentTextChanged.connect(self.parent_window.mark_as_modified)
-        self.server_config_widgets['TIME_OF_DAY'].addItems(['0000', '0300', '0600', '0900', '1200', '1500', '1800', '2100'])
+        self.server_config_widgets['TIME_OF_DAY'].addItems(['0000', '0100', '0200', '0300', '0400', '0500', '0600', '0700', '0800', '0900', '1000', '1100', '1200', '1300', '1400', '1500', '1600', '1700', '1800', '1900', '2000', '2100', '2200', '2300'])
         time_layout.addWidget(self.server_config_widgets['TIME_OF_DAY'])
         time_layout.addStretch()
         form_layout.addLayout(time_layout)
