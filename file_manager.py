@@ -17,21 +17,25 @@ def discover_tracks(content_root: str) -> Tuple[List[str], Dict[str, str]]:
     if not content_root:
         return [], {}
     
-    tracks_path = Path(content_root) / "tracks"
-    if not tracks_path.exists():
+    try:
+        tracks_path = Path(content_root) / "tracks"
+        if not tracks_path.exists():
+            return [], {}
+        
+        track_list = []
+        track_display_map = {}
+        
+        for track_dir in sorted(tracks_path.iterdir()):
+            if track_dir.is_dir():
+                track_name = track_dir.name
+                display_name = track_name.replace('_', ' ').upper()
+                track_list.append(display_name)
+                track_display_map[display_name] = track_name
+        
+        return track_list, track_display_map
+    except Exception:
+        # Return empty results on any error
         return [], {}
-    
-    track_list = []
-    track_display_map = {}
-    
-    for track_dir in sorted(tracks_path.iterdir()):
-        if track_dir.is_dir():
-            track_name = track_dir.name
-            display_name = track_name.replace('_', ' ').upper()
-            track_list.append(display_name)
-            track_display_map[display_name] = track_name
-    
-    return track_list, track_display_map
 
 
 def discover_cars(content_root: str) -> Dict[str, str]:
@@ -44,19 +48,23 @@ def discover_cars(content_root: str) -> Dict[str, str]:
     if not content_root:
         return {}
     
-    cars_path = Path(content_root) / "cars"
-    if not cars_path.exists():
+    try:
+        cars_path = Path(content_root) / "cars"
+        if not cars_path.exists():
+            return {}
+        
+        cars = {}
+        
+        for car_dir in sorted(cars_path.iterdir()):
+            if car_dir.is_dir():
+                car_name = car_dir.name
+                display_name = car_name.replace('_', ' ').upper()
+                cars[car_name] = display_name
+        
+        return cars
+    except Exception:
+        # Return empty results on any error
         return {}
-    
-    cars = {}
-    
-    for car_dir in sorted(cars_path.iterdir()):
-        if car_dir.is_dir():
-            car_name = car_dir.name
-            display_name = car_name.replace('_', ' ').upper()
-            cars[car_name] = display_name
-    
-    return cars
 
 
 def discover_weather(content_root: str) -> List[str]:
@@ -69,17 +77,21 @@ def discover_weather(content_root: str) -> List[str]:
     if not content_root:
         return []
     
-    weather_path = Path(content_root) / "weather"
-    if not weather_path.exists():
+    try:
+        weather_path = Path(content_root) / "weather"
+        if not weather_path.exists():
+            return []
+        
+        weather = []
+        
+        for weather_dir in sorted(weather_path.iterdir()):
+            if weather_dir.is_dir():
+                weather.append(weather_dir.name)
+        
+        return weather
+    except Exception:
+        # Return empty results on any error
         return []
-    
-    weather = []
-    
-    for weather_dir in sorted(weather_path.iterdir()):
-        if weather_dir.is_dir():
-            weather.append(weather_dir.name)
-    
-    return weather
 
 
 def get_car_skins(content_root: str, car_name: str) -> List[str]:
@@ -96,17 +108,21 @@ def get_car_skins(content_root: str, car_name: str) -> List[str]:
     if not content_root or not car_name:
         return []
     
-    skins_path = Path(content_root) / "cars" / car_name / "skins"
-    if not skins_path.exists():
+    try:
+        skins_path = Path(content_root) / "cars" / car_name / "skins"
+        if not skins_path.exists():
+            return []
+        
+        skins = []
+        
+        for skin_dir in sorted(skins_path.iterdir()):
+            if skin_dir.is_dir():
+                skins.append(skin_dir.name)
+        
+        return skins
+    except Exception:
+        # Return empty results on any error
         return []
-    
-    skins = []
-    
-    for skin_dir in sorted(skins_path.iterdir()):
-        if skin_dir.is_dir():
-            skins.append(skin_dir.name)
-    
-    return skins
 
 
 def list_server_directories(servers_parent_dir: str) -> List[Tuple[str, str]]:
@@ -146,7 +162,20 @@ def copy_server_template(servers_parent_dir: str) -> str:
     Returns:
         Path to the new server folder
     """
-    template_path = Path(__file__).parent / "VS Server"
+    # Get the path to the VS Server template directory
+    # This should be relative to the application's root directory
+    import sys
+    import os
+    
+    if getattr(sys, 'frozen', False):
+        # If running as a bundled executable
+        app_path = os.path.dirname(sys.executable)
+    else:
+        # If running in development mode
+        app_path = Path(__file__).parent.parent
+    
+    template_path = Path(app_path) / "VS Server"
+    
     if not template_path.exists():
         raise FileNotFoundError(f"Template not found at {template_path}")
     

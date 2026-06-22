@@ -820,6 +820,11 @@ class MainMenuTab(QWidget):
             new_server_path = file_manager.copy_server_template(self.parent_window.servers_parent_dir)
             self.populate_servers_list()
             self._select_server_in_list(new_server_path)
+            
+            # Ensure virtual steward tab is updated when new server is created
+            if self.parent_window.virtual_steward_tab:
+                self.parent_window.virtual_steward_tab.on_server_selected()
+            
             QMessageBox.information(self, "Success", f"Server created: {Path(new_server_path).name}")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to create server: {str(e)}")

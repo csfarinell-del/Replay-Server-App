@@ -181,9 +181,20 @@ class ACServerConfigGUI(QMainWindow):
     
     def on_content_discovery_changed(self):
         """Called when content root changes - discover available resources"""
-        self.discover_tracks()
-        self.discover_cars()
-        self.discover_weather()
+        try:
+            self.discover_tracks()
+        except Exception:
+            pass
+        
+        try:
+            self.discover_cars()
+        except Exception:
+            pass
+            
+        try:
+            self.discover_weather()
+        except Exception:
+            pass
     
     def discover_tracks(self):
         """Discover available tracks"""

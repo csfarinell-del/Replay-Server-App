@@ -17,6 +17,7 @@ A comprehensive GUI application for managing Assetto Corsa server configurations
 - Python 3.6+
 - PyQt5 or PyQt6
 - Assetto Corsa content files (tracks, cars, skins, weather)
+- VS Server folder: A `VS Server` folder must be present in the same directory as the executable. This folder serves as a template that gets copied when creating new servers using the "Add Server" button.
 
 ## Installation
 

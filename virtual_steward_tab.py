@@ -49,7 +49,7 @@ class VirtualStewardTab(QWidget):
         
         # Virtual Steward Enable checkbox
         self.vs_enabled_checkbox = QCheckBox("Enable Virtual Steward Replay Plugin")
-        self.vs_enabled_checkbox.stateChanged.connect(lambda: self.parent_window.mark_as_modified())
+        self.vs_enabled_checkbox.stateChanged.connect(self.on_vs_enabled_changed)
         main_layout.addWidget(self.vs_enabled_checkbox)
         
         # Replay file section
@@ -185,6 +185,18 @@ class VirtualStewardTab(QWidget):
         
         # Ensure proper initialization of dependent controls
         self.on_bot_trains_changed()
+        
+        # Make sure all controls are properly enabled when VS is checked
+        if is_checked:
+            # Re-enable the controls that should be active when VS is enabled
+            self.add_replay_btn.setEnabled(True)
+            self.loop_lap_input.setEnabled(True)
+            self.bot_trains_checkbox.setEnabled(True)
+            self.num_bots_combo.setEnabled(True)
+            self.train_gap_slider.setEnabled(self.bot_trains_checkbox.isChecked())
+        else:
+            # When unchecked, ensure all dependent controls are disabled
+            self.train_gap_slider.setEnabled(False)
     
     def on_bot_trains_changed(self):
         """Handle bot trains enable/disable"""
